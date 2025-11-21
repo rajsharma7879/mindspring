@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindSpring Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0e1420;
+            background-image: linear-gradient(rgba(14, 20, 32, 0.7), rgba(14, 20, 32, 0.7)), url('bg2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .main-card {
+            background: rgba(15, 20, 32, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(165, 243, 252, 0.2);
+            background-clip: padding-box;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+
+        .view-hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+            display: none;
+        }
+
+        .subject-card,
+        .topic-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subject-card:before,
+        .topic-card:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(103, 232, 249, 0.2), transparent);
+            transition: all 0.4s;
+        }
+
+        .subject-card:hover:before,
+        .topic-card:hover:before {
+            left: 100%;
+        }
+
+        .subject-card:hover,
+        .topic-card:hover {
+            background-color: rgba(103, 232, 249, 0.08);
+            border-color: #67e8f9;
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .quiz-option {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .quiz-option:hover {
+            background-color: rgba(103, 232, 249, 0.1);
+            border-color: #67e8f9;
+        }
+
+        .quiz-option.selected {
+            background-color: #4f46e5;
+            border-color: #818cf8;
+        }
+
+        .quiz-option.correct {
+            background-color: #166534 !important;
+            border-color: #22c55e !important;
+        }
+
+        .quiz-option.incorrect {
+            background-color: #991b1b !important;
+            border-color: #ef4444 !important;
+        }
+
+        .quiz-option.disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .primary-btn {
+            background-image: linear-gradient(to right, #4f46e5 0%, #a21caf 51%, #4f46e5 100%);
+            background-size: 200% auto;
+            color: white;
+            transition: 0.5s;
+        }
+
+        .primary-btn:hover {
+            background-position: right center;
+            transform: scale(1.03);
+        }
+
+        .primary-btn:active,
+        .secondary-btn:active {
+            transform: scale(0.98);
+        }
+
+        .secondary-btn {
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease-out;
+        }
+
+        .secondary-btn:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(103, 232, 249, 0.5);
+            transform: scale(1.03);
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-left-color: #67e8f9;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .glass-footer {
+            background: rgba(15, 20, 32, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(165, 243, 252, 0.15);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            height: 10px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background-image: linear-gradient(to right, #67e8f9, #4f46e5);
+            border-radius: 999px;
+            transition: width 0.4s ease-in-out;
+        }
+
+        .profile-modal {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, #67e8f9, #4f46e5);
+        }
+    </style>
+</head>
+
+<body class="text-white">
+
+    <div id="loading-spinner" class="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50">
+        <div class="loader"></div>
+    </div>
+
+    <div id="main-content" class="hidden flex-grow flex flex-col">
+        <header class="p-4">
+            <nav class="container mx-auto flex justify-between items-center">
+                <h1 id="logo" class="text-2xl font-bold cursor-pointer hover:text-cyan-300 transition-colors">MindSpring
+                </h1>
+                <div class="flex items-center space-x-4">
+                    <button id="profile-button" class="secondary-btn text-sm px-4 py-2 rounded-lg">Profile</button>
+                    <button id="logout-button" class="secondary-btn text-sm px-4 py-2 rounded-lg">Logout</button>
+                </div>
+            </nav>
+        </header>
+
+        <main class="container mx-auto p-4 flex justify-center flex-grow items-center">
+            <div class="w-full max-w-4xl">
+
+                <section id="home-container" class="main-card p-8 md:p-12 text-center">
+                    
+                    <h2 class="text-4xl md:text-5xl font-bold mb-4">
+                        Welcome to MindSpring: <br class="md:hidden"> <span id="typed-headline" class="text-cyan-300"></span>
+                    </h2>
+                    <p class="text-lg text-gray-300 max-w-3xl mx-auto mb-16">
+                        Sharpen your mind and expand your horizons. Test your knowledge, track your progress, and earn badges across a wide variety of subjects.
+                    </p>
+                    <br>
+                    <div class="mb-16">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <svg class="w-12 h-12 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold mb-1">Diverse Topics</h3>
+                                    <p class="text-gray-400">From JEE preparation to University-level subjects, find quizzes that match your learning goals.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <svg class="w-12 h-12 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold mb-1">Earn Badges</h3>
+                                    <p class="text-gray-400">Achieve perfect scores to unlock unique badges and showcase your expertise in your profile.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0">
+                                    <svg class="w-12 h-12 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold mb-1">Review & Learn</h3>
+                                    <p class="text-gray-400">Don't just get a score. Review your answers to understand your mistakes and learn effectively.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class="mb-12">
+                        <h3 class="text-2xl font-bold mb-6">Explore Quizzes In...</h3>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <span class="bg-cyan-900/50 border border-cyan-700 text-cyan-200 text-sm font-medium px-4 py-2 rounded-full">JEE Physics</span>
+                            <span class="bg-purple-900/50 border border-purple-700 text-purple-200 text-sm font-medium px-4 py-2 rounded-full">JEE Chemistry</span>
+                            <span class="bg-indigo-900/50 border border-indigo-700 text-indigo-200 text-sm font-medium px-4 py-2 rounded-full">University Maths</span>
+                            <span class="bg-rose-900/50 border border-rose-700 text-rose-200 text-sm font-medium px-4 py-2 rounded-full">Mechanical Engineering</span>
+                            <span class="text-gray-400 text-sm font-medium px-4 py-2">& more!</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-10">
+                        <h3 class="text-2xl font-bold mb-4">Ready to Test Your Knowledge?</h3>
+                        <button id="get-started-btn" class="primary-btn px-8 py-3 rounded-lg font-semibold text-lg">Get Started</button>
+                    </div>
+                </section>
+                <section id="subject-selection" class="main-card p-8 view-hidden">
+                    <h2 class="text-3xl font-bold text-center mb-8">Choose a Subject</h2>
+                    <div id="subject-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </section>
+
+                <section id="topic-selection" class="main-card p-8 view-hidden">
+                    <button id="back-to-subjects" class="secondary-btn mb-6 text-sm px-4 py-2 rounded-lg">&larr; Back to
+                        Subjects</button>
+                    <h2 id="topic-title" class="text-3xl font-bold text-center mb-8"></h2>
+                    <div id="topic-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+                </section>
+
+                <section id="quiz-container" class="main-card p-8 view-hidden">
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center space-x-4">
+                                <h2 id="quiz-topic-title" class="text-2xl font-bold"></h2>
+                                <p id="question-counter" class="text-lg font-medium text-cyan-300"></p>
+                            </div>
+                            <p id="timer" class="text-lg font-medium text-cyan-300">00:00</p>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div id="question-text" class="text-xl my-8"></div>
+                    <div id="options-container" class="space-y-4"></div>
+                    <div class="mt-8 text-right">
+                        <button id="next-question-btn" class="primary-btn px-8 py-3 rounded-lg font-semibold w-32">Next
+                            &rarr;</button>
+                    </div>
+                </section>
+
+                <section id="score-container" class="main-card p-8 text-center view-hidden relative">
+                    <canvas id="confetti-canvas"
+                        class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
+                    <h2 class="text-3xl font-bold mb-4">Quiz Complete!</h2>
+                    <p class="text-xl mb-6">Your final score is:</p>
+                    <p id="final-score" class="text-6xl font-bold text-cyan-300 mb-2"></p>
+                    <p id="time-taken" class="text-lg text-gray-400 mb-6"></p>
+                    <p id="score-feedback" class="text-lg text-gray-300 mb-10"></p>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <button id="review-answers-btn" class="secondary-btn px-6 py-3 rounded-lg font-semibold">Review
+                            Answers</button>
+                        <button id="retry-quiz-btn" class="primary-btn px-6 py-3 rounded-lg font-semibold">Try
+                            Again</button>
+                        <button id="back-to-topics-btn" class="secondary-btn px-6 py-3 rounded-lg font-semibold">Choose
+                            Another Topic</button>
+                    </div>
+                </section>
+
+                <section id="review-container" class="main-card p-8 view-hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-center">Review Your Answers</h2>
+                        <button id="back-to-score-btn" class="secondary-btn px-4 py-2 rounded-lg font-semibold">Back to
+                            Score</button>
+                    </div>
+                    <div id="review-questions" class="space-y-8"></div>
+                </section>
+
+                <div id="profile-modal"
+                    class="profile-modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 view-hidden z-40">
+                    <div class="main-card w-full max-w-2xl p-8 relative">
+                        <button id="close-profile-btn"
+                            class="absolute top-4 right-4 text-2xl hover:text-cyan-300">&times;</button>
+                        <h2 class="text-3xl font-bold text-center mb-8">Your Badges</h2>
+                        <div id="badge-container"
+                            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-center">
+                            </div>
+                        <p id="no-badges-msg" class="text-center text-gray-400 hidden">You haven't earned any badges
+                            yet. Get a perfect score on a quiz to earn one!</p>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <footer class="glass-footer mt-auto">
+            <div class="container mx-auto px-6 py-8">
+                <div class="flex flex-col items-center text-center">
+                    <h2 class="text-2xl font-bold">MindSpring</h2>
+                    <p class="text-gray-400 mt-2">© 2024 MindSpring. All rights reserved.</p>
+                    <a href="aboutus.html" class="text-cyan-300 hover:text-cyan-100 transition-colors ml-4">About Us</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="https://unpkg.com/typed.js@2.0.16/dist/typed.umd.js"></script>
+
+    <script type="module">
+        // Using version 10.13.2 consistently
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+        // CORRECT CONFIGURATION (etccc-89731)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDhMN6bJqXLdZjaHTrCfzKgrGe157wB-Ek",
+            authDomain: "etccc-89731.firebaseapp.com",
+            projectId: "etccc-89731",
+            storageBucket: "etccc-89731.firebasestorage.app",
+            messagingSenderId: "716167839784",
+            appId: "1:716167839784:web:ea3091d27c21af8cb7751d",
+            measurementId: "G-B89SY1ZMQ0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- All your quizData remains here, unchanged ---
+        const quizData = {
+            "JEE Physics": {
+                "Basic_Mechanics": [
+                    { "q": "A particle starts from rest and moves with uniform acceleration a. The distance covered in time t is:", "o": ["ut + 1/2 at²", "1/2 at²", "at²", "u²/2a"], "a": "1/2 at²" },
+                    { "q": "If a body is projected vertically upwards with velocity u, the maximum height reached is:", "o": ["u²/2g", "u²/g", "u²/4g", "2u²/g"], "a": "u²/2g" },
+                    { "q": "The area under velocity-time graph represents:", "o": ["Displacement", "Acceleration", "Speed", "Force"], "a": "Displacement" },
+                    { "q": "A body of mass m is moving with velocity v. Its kinetic energy is:", "o": ["mv²", "1/2 mv²", "p²/2m", "Both (b) and (c)"], "a": "Both (b) and (c)" },
+                    { "q": "The unit of impulse is same as that of:", "o": ["Force", "Momentum", "Energy", "Power"], "a": "Momentum" },
+                    { "q": "A ball is dropped from a height h. The velocity with which it hits the ground is:", "o": ["√(2gh)", "gh", "2gh", "h²/2g"], "a": "√(2gh)" },
+                    { "q": "Which law of Newton defines force?", "o": ["First law", "Second law", "Third law", "Law of gravitation"], "a": "Second law" },
+                    { "q": "For a projectile, the horizontal component of velocity:", "o": ["Remains constant", "Becomes zero", "Increases", "Decreases"], "a": "Remains constant" },
+                    { "q": "Work done is maximum when angle between force and displacement is:", "o": ["0°", "90°", "180°", "45°"], "a": "0°" },
+                    { "q": "If a body of mass 10 kg is accelerated by 2 m/s², the force applied is:", "o": ["20 N", "5 N", "2 N", "10 N"], "a": "20 N" },
+                    { "q": "Power is the rate of doing:", "o": ["Work", "Energy", "Force", "Momentum"], "a": "Work" },
+                    { "q": "In circular motion, the acceleration is directed towards:", "o": ["Centre", "Tangent", "Outside", "Axis"], "a": "Centre" },
+                    { "q": "The momentum of a body is defined as:", "o": ["m/v", "mv", "v/m", "m²v"], "a": "mv" },
+                    { "q": "If velocity is doubled, kinetic energy becomes:", "o": ["Two times", "Four times", "Half", "One-fourth"], "a": "Four times" },
+                    { "q": "Dimension of force is:", "o": ["[MLT⁻²]", "[ML²T⁻²]", "[MLT⁻¹]", "[M⁻¹LT]"], "a": "[MLT⁻²]" },
+                    { "q": "When a force is applied at 90° to displacement, work done is:", "o": ["Maximum", "Zero", "Negative", "Positive"], "a": "Zero" },
+                    { "q": "Acceleration due to gravity on earth is maximum at:", "o": ["Poles", "Equator", "Centre", "Mountains"], "a": "Poles" },
+                    { "q": "The unit of gravitational constant G is:", "o": ["Nm²/kg²", "Nm/kg²", "Nm²/kg", "N/kg"], "a": "Nm²/kg²" },
+                    { "q": "Escape velocity on earth is nearly:", "o": ["11.2 km/s", "22.4 km/s", "5.6 km/s", "9.8 km/s"], "a": "11.2 km/s" },
+                    { "q": "Work-energy theorem states:", "o": ["Work = Kinetic energy", "Work = Change in KE", "Work = Potential energy", "Work = Momentum"], "a": "Work = Change in KE" }
+                ],
+                "Oscillations_and_Waves": [
+                    { "q": "Time period of a simple pendulum depends on:", "o": ["Length", "Mass", "Amplitude", "Material"], "a": "Length" },
+                    { "q": "The frequency of SHM is reciprocal of:", "o": ["Amplitude", "Time period", "Displacement", "Velocity"], "a": "Time period" },
+                    { "q": "In resonance, amplitude is:", "o": ["Minimum", "Maximum", "Zero", "Constant"], "a": "Maximum" },
+                    { "q": "A wave has speed 340 m/s and frequency 170 Hz. Its wavelength is:", "o": ["1 m", "2 m", "3 m", "4 m"], "a": "2 m" },
+                    { "q": "The equation y = A sin(ωt + kx) represents:", "o": ["Progressive wave", "Standing wave", "SHM", "None"], "a": "Progressive wave" },
+                    { "q": "For stationary waves, nodes are points of:", "o": ["Maximum displacement", "Zero displacement", "Maximum velocity", "Constant velocity"], "a": "Zero displacement" },
+                    { "q": "The speed of sound in air increases with:", "o": ["Temperature", "Pressure", "Density", "Humidity"], "a": "Temperature" },
+                    { "q": "Beats are formed due to:", "o": ["Interference of two waves of slightly different frequencies", "Resonance", "Diffraction", "Reflection"], "a": "Interference of two waves of slightly different frequencies" },
+                    { "q": "The unit of frequency is:", "o": ["Hertz", "Newton", "Pascal", "Tesla"], "a": "Hertz" },
+                    { "q": "In longitudinal waves, particles oscillate:", "o": ["Perpendicular to wave", "Along direction of wave", "Randomly", "None"], "a": "Along direction of wave" },
+                    { "q": "In transverse waves, oscillations are:", "o": ["Parallel", "Perpendicular", "Random", "Circular"], "a": "Perpendicular" },
+                    { "q": "Quality of sound depends on:", "o": ["Frequency", "Amplitude", "Waveform", "Velocity"], "a": "Waveform" },
+                    { "q": "Pitch of sound depends on:", "o": ["Frequency", "Amplitude", "Wavelength", "Velocity"], "a": "Frequency" },
+                    { "q": "Loudness of sound depends on:", "o": ["Amplitude", "Frequency", "Pitch", "Wavelength"], "a": "Amplitude" },
+                    { "q": "The fundamental frequency is also called:", "o": ["First overtone", "First harmonic", "Second harmonic", "Zero harmonic"], "a": "First harmonic" },
+                    { "q": "The relation between velocity, frequency and wavelength is:", "o": ["v = λf", "v = λ/f", "v = f/λ", "v = λ + f"], "a": "v = λf" },
+                    { "q": "If two tuning forks produce 5 beats per second, their frequencies differ by:", "o": ["5 Hz", "10 Hz", "2.5 Hz", "1 Hz"], "a": "5 Hz" },
+                    { "q": "In SHM, restoring force is proportional to:", "o": ["Displacement", "Velocity", "Acceleration", "Mass"], "a": "Displacement" },
+                    { "q": "Time period of mass-spring system is proportional to:", "o": ["√m", "√k", "1/√m", "1/k"], "a": "√m" },
+                    { "q": "The speed of sound in solids compared to gases is:", "o": ["Less", "More", "Equal", "Zero"], "a": "More" }
+                ],
+                "Rotational_Dynamics": [
+                    { "q": "Moment of inertia depends on:", "o": ["Mass distribution", "Force", "Velocity", "Acceleration"], "a": "Mass distribution" },
+                    { "q": "Torque is defined as:", "o": ["Force × Time", "Force × Distance", "Force × Acceleration", "Force × Velocity"], "a": "Force × Distance" },
+                    { "q": "The SI unit of torque is:", "o": ["Nm", "Joule", "Watt", "N"], "a": "Nm" },
+                    { "q": "Angular momentum is conserved when:", "o": ["Force is zero", "Torque is zero", "Acceleration is zero", "Velocity is zero"], "a": "Torque is zero" },
+                    { "q": "The relation between torque and angular acceleration is:", "o": ["τ = Iα", "τ = ma", "τ = mv²", "τ = Fd"], "a": "τ = Iα" },
+                    { "q": "Parallel axis theorem is used to calculate:", "o": ["Moment of inertia", "Torque", "Angular momentum", "Work"], "a": "Moment of inertia" },
+                    { "q": "Perpendicular axis theorem is applicable for:", "o": ["1D bodies", "2D lamina", "3D solids", "Point masses"], "a": "2D lamina" },
+                    { "q": "Kinetic energy of rotation is:", "o": ["1/2 Iω²", "Iω", "1/2 mω²", "mω²"], "a": "1/2 Iω²" },
+                    { "q": "Rolling motion is a combination of:", "o": ["Rotation + Translation", "Translation + Vibration", "Rotation + Oscillation", "Oscillation + Vibration"], "a": "Rotation + Translation" },
+                    { "q": "The SI unit of angular velocity is:", "o": ["rad/s", "m/s", "Hz", "rpm"], "a": "rad/s" },
+                    { "q": "Moment of inertia of a thin rod about its centre is:", "o": ["ML²/12", "ML²/3", "ML²/2", "ML²"], "a": "ML²/12" },
+                    { "q": "If angular velocity doubles, rotational KE becomes:", "o": ["Two times", "Four times", "Half", "One-fourth"], "a": "Four times" },
+                    { "q": "Work done in rotation is:", "o": ["τθ", "Iω", "Iα", "τ/I"], "a": "τθ" },
+                    { "q": "A flywheel stores:", "o": ["Rotational energy", "Potential energy", "Translational energy", "Heat energy"], "a": "Rotational energy" },
+                    { "q": "Angular acceleration is given by:", "o": ["dω/dt", "dv/dt", "dθ/dt", "d²θ/dt²"], "a": "dω/dt" },
+                    { "q": "If torque is constant, angular momentum varies:", "o": ["Linearly with time", "Quadratically", "Constant", "Zero"], "a": "Linearly with time" },
+                    { "q": "Moment of inertia of a ring about its diameter is:", "o": ["MR²/2", "MR²", "2MR²", "MR²/4"], "a": "MR²/2" },
+                    { "q": "A couple produces:", "o": ["Force", "Torque", "Work", "Energy"], "a": "Torque" },
+                    { "q": "Dimension of torque is same as:", "o": ["Work", "Force", "Energy", "Power"], "a": "Work" },
+                    { "q": "Angular momentum of a particle moving in a circle of radius r is:", "o": ["mvr", "mv/r", "mr/v", "m²vr"], "a": "mvr" }
+                ],
+                "Current_Electricity": [
+                    { "q": "Ohm’s law states that:", "o": ["V ∝ I", "V ∝ R", "I ∝ R", "V ∝ 1/I"], "a": "V ∝ I" },
+                    { "q": "The unit of resistivity is:", "o": ["Ωm", "Ω/m", "Ωm²", "Ω⁻¹m"], "a": "Ωm" },
+                    { "q": "For a metallic conductor, resistance increases with:", "o": ["Temperature", "Area", "Length", "Both length and temperature"], "a": "Both length and temperature" },
+                    { "q": "The drift velocity of electrons is proportional to:", "o": ["Current density", "Area", "Voltage", "Power"], "a": "Current density" },
+                    { "q": "The equivalent resistance of two resistors R1 and R2 in series is:", "o": ["R1+R2", "R1R2/(R1+R2)", "R1–R2", "R1/R2"], "a": "R1+R2" },
+                    { "q": "The equivalent resistance of two resistors R1 and R2 in parallel is:", "o": ["R1+R2", "R1R2/(R1+R2)", "R1–R2", "R1/R2"], "a": "R1R2/(R1+R2)" },
+                    { "q": "Current is defined as:", "o": ["Charge/Time", "Charge×Time", "Voltage/Charge", "Power/Voltage"], "a": "Charge/Time" },
+                    { "q": "The unit of current is:", "o": ["Ampere", "Volt", "Coulomb", "Ohm"], "a": "Ampere" },
+                    { "q": "A battery has emf E and internal resistance r. Maximum power is delivered to load when:", "o": ["R = r", "R > r", "R < r", "R = 0"], "a": "R = r" },
+                    { "q": "Heating effect of current is given by:", "o": ["I²Rt", "VIt", "Q = mcΔT", "VI"], "a": "I²Rt" },
+                    { "q": "The conductivity is reciprocal of:", "o": ["Resistivity", "Resistance", "Impedance", "Capacitance"], "a": "Resistivity" },
+                    { "q": "Potential difference between two points is defined as:", "o": ["Work done per unit charge", "Force per unit charge", "Energy per unit time", "Charge per unit force"], "a": "Work done per unit charge" },
+                    { "q": "For copper, resistivity is about:", "o": ["1.7 × 10⁻⁸ Ωm", "1.7 × 10⁻⁶ Ωm", "1.7 × 10⁻⁵ Ωm", "1.7 × 10⁻⁷ Ωm"], "a": "1.7 × 10⁻⁸ Ωm" },
+                    { "q": "The unit of current density is:", "o": ["A/m²", "A·m²", "Ω/m", "V/m"], "a": "A/m²" },
+                    { "q": "If a wire is stretched to double its length, its resistance becomes:", "o": ["2R", "R/2", "4R", "R"], "a": "4R" },
+                    { "q": "Kirchhoff’s junction rule is based on:", "o": ["Law of conservation of energy", "Law of conservation of charge", "Law of conservation of mass", "Law of conservation of momentum"], "a": "Law of conservation of charge" },
+                    { "q": "The drift speed of electrons in a conductor is of order:", "o": ["10⁻¹ m/s", "10⁻³ m/s", "10² m/s", "10³ m/s"], "a": "10⁻³ m/s" },
+                    { "q": "Mobility is defined as:", "o": ["Drift velocity per unit electric field", "Current per unit area", "Charge per unit field", "Resistance per unit length"], "a": "Drift velocity per unit electric field" },
+                    { "q": "The resistance of a wire is doubled if:", "o": ["Length doubled", "Area doubled", "Both doubled", "Resistivity doubled"], "a": "Length doubled" },
+                    { "q": "In a metallic conductor, current is due to:", "o": ["Electrons", "Protons", "Neutrons", "Ions"], "a": "Electrons" }
+                ],
+                "Electrostatics": [
+                    { "q": "Coulomb’s law gives the force between:", "o": ["Two charges", "Two masses", "Two currents", "Two dipoles"], "a": "Two charges" },
+                    { "q": "The SI unit of charge is:", "o": ["Ampere", "Coulomb", "Volt", "Ohm"], "a": "Coulomb" },
+                    { "q": "Permittivity of free space is denoted by:", "o": ["ε₀", "μ₀", "σ", "ρ"], "a": "ε₀" },
+                    { "q": "The electric field due to a point charge varies as:", "o": ["1/r²", "1/r", "r", "r²"], "a": "1/r²" },
+                    { "q": "The unit of electric field is:", "o": ["N/C", "J/C", "V", "Nm"], "a": "N/C" },
+                    { "q": "Electric flux is given by:", "o": ["E·A", "E/A", "EA²", "E/A²"], "a": "E·A" },
+                    { "q": "Gauss’s law relates electric flux with:", "o": ["Charge enclosed", "Potential", "Field intensity", "Permittivity"], "a": "Charge enclosed" },
+                    { "q": "Potential at infinity due to a point charge is:", "o": ["Zero", "Infinite", "Constant", "Negative"], "a": "Zero" },
+                    { "q": "Equipotential surfaces are always:", "o": ["Parallel", "Perpendicular to electric field", "Random", "Inclined"], "a": "Perpendicular to electric field" },
+                    { "q": "Capacitance of a parallel plate capacitor is proportional to:", "o": ["Area", "1/Distance", "Dielectric constant", "All of these"], "a": "All of these" },
+                    { "q": "Energy stored in a capacitor is:", "o": ["1/2 CV²", "CV", "QV", "1/2 Q²/C"], "a": "1/2 CV²" },
+                    { "q": "The SI unit of capacitance is:", "o": ["Farad", "Coulomb", "Henry", "Tesla"], "a": "Farad" },
+                    { "q": "A dielectric increases capacitance because:", "o": ["Reduces electric field", "Reduces potential", "Increases charge", "Increases area"], "a": "Reduces electric field" },
+                    { "q": "Electric dipole moment is defined as:", "o": ["q × 2r", "q × d", "q/d", "q + d"], "a": "q × d" },
+                    { "q": "Potential energy of a dipole in electric field is:", "o": ["-p·E cosθ", "pE", "qE", "p/E"], "a": "-p·E cosθ" },
+                    { "q": "The unit of electric potential is:", "o": ["Volt", "Ampere", "Coulomb", "Tesla"], "a": "Volt" },
+                    { "q": "The work done in moving a unit charge in an electric field is:", "o": ["Potential", "Flux", "Current", "Resistance"], "a": "Potential" },
+                    { "q": "The force between two like charges is:", "o": ["Attractive", "Repulsive", "Zero", "Random"], "a": "Repulsive" },
+                    { "q": "The capacitance of an isolated conductor depends on:", "o": ["Shape and size", "Material only", "Charge only", "Potential"], "a": "Shape and size" },
+                    { "q": "Unit of permittivity is:", "o": ["C²/Nm²", "C/Nm²", "C²/Nm", "C²m/N"], "a": "C²/Nm²" }
+                ],
+                "Electromagnetism": [
+                    { "q": "Magnetic field inside a solenoid is:", "o": ["Uniform", "Non-uniform", "Zero", "Infinite"], "a": "Uniform" },
+                    { "q": "Right-hand thumb rule is used to find:", "o": ["Direction of current", "Direction of magnetic field", "Magnitude of current", "Magnitude of force"], "a": "Direction of magnetic field" },
+                    { "q": "Force on a moving charge in a magnetic field is:", "o": ["qvB sinθ", "qE", "mv²/r", "q/ε"], "a": "qvB sinθ" },
+                    { "q": "SI unit of magnetic flux is:", "o": ["Weber", "Tesla", "Henry", "Ampere"], "a": "Weber" },
+                    { "q": "A current carrying conductor produces:", "o": ["Electric field", "Magnetic field", "Electrostatic force", "None"], "a": "Magnetic field" },
+                    { "q": "The device which works on the principle of electromagnetic induction is:", "o": ["Motor", "Generator", "Battery", "Photocell"], "a": "Generator" },
+                    { "q": "Lenz’s law is in accordance with:", "o": ["Law of conservation of charge", "Law of conservation of momentum", "Law of conservation of energy", "Law of conservation of mass"], "a": "Law of conservation of energy" },
+                    { "q": "Unit of self-inductance is:", "o": ["Henry", "Tesla", "Weber", "Joule"], "a": "Henry" },
+                    { "q": "Transformer works on:", "o": ["AC only", "DC only", "Both AC and DC", "Static electricity"], "a": "AC only" },
+                    { "q": "The expression for magnetic force on current carrying wire is:", "o": ["BIL sinθ", "BIL", "IL/θ", "BI²L"], "a": "BIL sinθ" },
+                    { "q": "Cyclotron is a device to accelerate:", "o": ["Electrons", "Protons", "Charged particles", "All of these"], "a": "All of these" },
+                    { "q": "The dimensional formula of magnetic flux is:", "o": ["[ML²T⁻²A⁻¹]", "[MLT⁻²A⁻²]", "[ML²T⁻¹A⁻¹]", "[M²LT⁻²A⁻¹]"], "a": "[ML²T⁻²A⁻¹]" },
+                    { "q": "The magnetic field at the centre of a circular coil is proportional to:", "o": ["Number of turns", "Current", "1/radius", "All of these"], "a": "All of these" },
+                    { "q": "Eddy currents are produced due to:", "o": ["Induced emf", "Electrostatics", "Friction", "Charge leakage"], "a": "Induced emf" },
+                    { "q": "The direction of induced emf is given by:", "o": ["Lenz’s law", "Faraday’s law", "Gauss law", "Coulomb’s law"], "a": "Lenz’s law" },
+                    { "q": "Unit of magnetic field is:", "o": ["Tesla", "Henry", "Weber", "Coulomb"], "a": "Tesla" },
+                    { "q": "If current in a coil is doubled, magnetic field becomes:", "o": ["Two times", "Four times", "Half", "Zero"], "a": "Two times" },
+                    { "q": "Induced emf in a coil is proportional to:", "o": ["Rate of change of flux", "Flux", "Current", "Resistance"], "a": "Rate of change of flux" },
+                    { "q": "Magnetic susceptibility of a diamagnetic material is:", "o": ["Positive", "Negative", "Zero", "Infinite"], "a": "Negative" },
+                    { "q": "In AC circuits, inductive reactance is given by:", "o": ["XL = ωL", "XC = 1/ωC", "XL = 1/ωL", "XL = ω/C"], "a": "XL = ωL" }
+                ],
+                "Optics": [
+                    { "q": "The speed of light is maximum in:", "o": ["Vacuum", "Air", "Glass", "Water"], "a": "Vacuum" },
+                    { "q": "Lens formula is:", "o": ["1/f = 1/v + 1/u", "1/f = v/u", "f = uv", "f = u+v"], "a": "1/f = 1/v + 1/u" },
+                    { "q": "Critical angle is defined for:", "o": ["Refraction", "Reflection", "Diffraction", "Polarisation"], "a": "Refraction" },
+                    { "q": "The unit of power of lens is:", "o": ["Dioptre", "Tesla", "Joule", "Watt"], "a": "Dioptre" },
+                    { "q": "Young’s double slit experiment shows:", "o": ["Diffraction", "Interference", "Polarisation", "Refraction"], "a": "Interference" },
+                    { "q": "The focal length of a plane mirror is:", "o": ["Infinity", "Zero", "1", "Negative"], "a": "Infinity" },
+                    { "q": "In a concave mirror, parallel rays converge to:", "o": ["Focus", "Centre of curvature", "Pole", "Vertex"], "a": "Focus" },
+                    { "q": "The phenomenon of rainbow formation is due to:", "o": ["Dispersion", "Polarisation", "Diffraction", "Interference"], "a": "Dispersion" },
+                    { "q": "Mirage is an example of:", "o": ["Total internal reflection", "Diffraction", "Polarisation", "Scattering"], "a": "Total internal reflection" },
+                    { "q": "The colour of sky appears blue due to:", "o": ["Dispersion", "Scattering", "Diffraction", "Polarisation"], "a": "Scattering" },
+                    { "q": "Brewster’s law deals with:", "o": ["Polarisation", "Refraction", "Interference", "Diffraction"], "a": "Polarisation" },
+                    { "q": "Diffraction is more pronounced when:", "o": ["Aperture is large", "Aperture is small", "Wavelength is small", "Distance is small"], "a": "Aperture is small" },
+                    { "q": "The unit of wavelength is:", "o": ["Metre", "Newton", "Volt", "Coulomb"], "a": "Metre" },
+                    { "q": "Interference fringes are due to:", "o": ["Coherent sources", "Non-coherent sources", "Diffusion", "Reflection"], "a": "Coherent sources" },
+                    { "q": "In optical fibres, light propagates due to:", "o": ["Refraction", "Total internal reflection", "Dispersion", "Diffraction"], "a": "Total internal reflection" },
+                    { "q": "The minimum deviation in prism occurs when:", "o": ["Angle of incidence = angle of emergence", "i > e", "i < e", "i = 90°"], "a": "Angle of incidence = angle of emergence" },
+                    { "q": "A convex lens is also known as:", "o": ["Converging lens", "Diverging lens", "Neutral lens", "None"], "a": "Converging lens" },
+                    { "q": "The phenomenon that proves transverse nature of light is:", "o": ["Polarisation", "Diffraction", "Interference", "Refraction"], "a": "Polarisation" },
+                    { "q": "Dispersion of light is due to:", "o": ["Different speeds in medium", "Same speeds in medium", "Reflection", "Absorption"], "a": "Different speeds in medium" },
+                    { "q": "If focal length of lens is 50 cm, its power is:", "o": ["2 D", "0.5 D", "1 D", "4 D"], "a": "2 D" }
+                ],
+                "Modern_Physics": [
+                    { "q": "The energy of a photon is given by:", "o": ["E = mc²", "E = hf", "E = 1/2 mv²", "E = h/λ"], "a": "E = hf" },
+                    { "q": "Photoelectric effect proves the:", "o": ["Wave nature of light", "Particle nature of light", "Dual nature of electrons", "Diffraction of light"], "a": "Particle nature of light" },
+                    { "q": "In photoelectric effect, stopping potential depends on:", "o": ["Intensity of light", "Frequency of light", "Distance of source", "Area of cathode"], "a": "Frequency of light" },
+                    { "q": "De Broglie wavelength of a particle is inversely proportional to:", "o": ["Momentum", "Energy", "Frequency", "Velocity"], "a": "Momentum" },
+                    { "q": "In a hydrogen atom, energy of electron in nth orbit is proportional to:", "o": ["1/n²", "n²", "1/n", "n"], "a": "1/n²" },
+                    { "q": "The ground state energy of hydrogen atom is:", "o": ["-13.6 eV", "-3.4 eV", "-1.51 eV", "0 eV"], "a": "-13.6 eV" },
+                    { "q": "Radioactive decay is governed by:", "o": ["Exponential law", "Linear law", "Parabolic law", "Logarithmic law"], "a": "Exponential law" },
+                    { "q": "The half-life of a radioactive substance is the time in which:", "o": ["Half the mass decays", "Half the atoms decay", "Both (a) and (b)", "Activity becomes double"], "a": "Both (a) and (b)" },
+                    { "q": "Which radiation has maximum penetrating power?", "o": ["Alpha", "Beta", "Gamma", "Neutron"], "a": "Gamma" },
+                    { "q": "In nuclear fission, energy is released due to:", "o": ["Conversion of protons to neutrons", "Mass defect", "Electron capture", "Neutrino emission"], "a": "Mass defect" },
+                    { "q": "Binding energy per nucleon is maximum for:", "o": ["Hydrogen", "Uranium", "Iron", "Plutonium"], "a": "Iron" },
+                    { "q": "Semiconductors have energy band gap of:", "o": ["> 5 eV", "0 eV", "1–2 eV", "< 0.1 eV"], "a": "1–2 eV" },
+                    { "q": "In an n-type semiconductor, majority carriers are:", "o": ["Holes", "Electrons", "Protons", "Neutrons"], "a": "Electrons" },
+                    { "q": "Zener diode is used as:", "o": ["Rectifier", "Amplifier", "Voltage regulator", "Oscillator"], "a": "Voltage regulator" },
+                    { "q": "LEDs are made of:", "o": ["Metals", "Semiconductors", "Insulators", "Alloys"], "a": "Semiconductors" },
+                    { "q": "The threshold frequency in photoelectric effect depends on:", "o": ["Work function of metal", "Intensity of light", "Velocity of electrons", "Wavelength only"], "a": "Work function of metal" },
+                    { "q": "Which of the following has wave-particle duality?", "o": ["Light only", "Electrons only", "Both light and matter particles", "None"], "a": "Both light and matter particles" },
+                    { "q": "The charge-to-mass ratio (e/m) of an electron was measured by:", "o": ["Millikan", "Thomson", "Rutherford", "Einstein"], "a": "Thomson" },
+                    { "q": "Which radiation is used in medical imaging and diagnosis?", "o": ["Alpha", "Beta", "Gamma", "Neutron"], "a": "Gamma" },
+                    { "q": "The process used in the sun for energy production is:", "o": ["Nuclear fission", "Nuclear fusion", "Beta decay", "Alpha decay"], "a": "Nuclear fusion" }
+                ]
+            },
+            "JEE Chemistry": {
+                "Nomenclature_of_Organic_Compounds": [
+                    { "q": "The IUPAC name of CH₃-CH₂-CH₃ is:", "o": ["Methane", "Ethane", "Propane", "Butane"], "a": "Propane" },
+                    { "q": "The IUPAC name of CH₃-CH₂-CH₂-OH is:", "o": ["Ethanol", "Propanol", "Methanol", "Butanol"], "a": "Propanol" },
+                    { "q": "The compound CH₃-COOH is named as:", "o": ["Methanoic acid", "Ethanoic acid", "Propanoic acid", "Acetic acid"], "a": "Ethanoic acid" },
+                    { "q": "The IUPAC name of CH₃-CHCl-CH₃ is:", "o": ["1-chloropropane", "2-chloropropane", "3-chloropropane", "Chloromethane"], "a": "2-chloropropane" },
+                    { "q": "CH₃-CHO is named as:", "o": ["Methanal", "Ethanone", "Ethanol", "Ethanal"], "a": "Ethanal" },
+                    { "q": "The IUPAC name of CH₃-CH₂-CH₂-CH₃ is:", "o": ["Butane", "Propane", "Pentane", "Hexane"], "a": "Butane" },
+                    { "q": "The compound C₆H₆ is known as:", "o": ["Cyclohexane", "Benzene", "Hexane", "Hexene"], "a": "Benzene" },
+                    { "q": "The IUPAC name of CH≡CH is:", "o": ["Ethane", "Ethene", "Ethyne", "Ethanol"], "a": "Ethyne" },
+                    { "q": "The compound CH₃-O-CH₃ is named as:", "o": ["Methoxyethane", "Methoxymethane", "Dimethyl ether", "Ethoxyethane"], "a": "Dimethyl ether" },
+                    { "q": "The IUPAC name of (CH₃)₂CH-CH₃ is:", "o": ["n-butane", "isobutane", "pentane", "isopentane"], "a": "isobutane" },
+                    { "q": "The compound CH₃-CH₂-CN is named as:", "o": ["Ethanenitrile", "Propanenitrile", "Methanenitrile", "Butanenitrile"], "a": "Propanenitrile" },
+                    { "q": "CH₃-CH₂-NH₂ is called:", "o": ["Methylamine", "Ethylamine", "Propylamine", "Butylamine"], "a": "Ethylamine" },
+                    { "q": "The IUPAC name of CH₃-CH₂-CHO is:", "o": ["Methanal", "Ethanal", "Propanal", "Butanal"], "a": "Propanal" },
+                    { "q": "CH₂=CH₂ is named as:", "o": ["Ethane", "Ethene", "Ethyne", "Ethanol"], "a": "Ethene" },
+                    { "q": "The correct IUPAC name of CH₃-CO-CH₃ is:", "o": ["Propanal", "Propanone", "Butanone", "Acetaldehyde"], "a": "Propanone" },
+                    { "q": "The compound CH₃-CH₂-COOH is:", "o": ["Methanoic acid", "Ethanoic acid", "Propanoic acid", "Butanoic acid"], "a": "Propanoic acid" },
+                    { "q": "The compound CH₃-CH₂-O-CH₃ is:", "o": ["Ethoxyethane", "Methoxyethane", "Dimethyl ether", "Methoxymethane"], "a": "Methoxyethane" },
+                    { "q": "The compound with formula CHCl₃ is named as:", "o": ["Chloromethane", "Trichloromethane", "Tetrachloromethane", "Dichloromethane"], "a": "Trichloromethane" },
+                    { "q": "The IUPAC name of CH₃-NH₂ is:", "o": ["Ammonia", "Methylamine", "Methanamine", "Ethylamine"], "a": "Methanamine" },
+                    { "q": "The compound CH₂OH-CH₂OH is called:", "o": ["Methanol", "Ethanol", "Ethane-1,2-diol", "Ethane-1,2-dione"], "a": "Ethane-1,2-diol" }
+                ],
+                "Organic_Compounds": [
+                    { "q": "Which test is used to distinguish aldehydes from ketones?", "o": ["Fehling’s test", "Baeyer’s test", "Tollen’s test", "Lucas test"], "a": "Tollen’s test" },
+                    { "q": "Aniline reacts with bromine water to give:", "o": ["Monobromoaniline", "Tribromoaniline", "Dibromoaniline", "Nitroaniline"], "a": "Tribromoaniline" },
+                    { "q": "The functional group –CHO represents:", "o": ["Ketone", "Aldehyde", "Alcohol", "Amine"], "a": "Aldehyde" },
+                    { "q": "Glucose belongs to which class of organic compounds?", "o": ["Aldose", "Ketose", "Disaccharide", "Polysaccharide"], "a": "Aldose" },
+                    { "q": "Which compound gives a silver mirror test?", "o": ["Ketone", "Alcohol", "Aldehyde", "Ether"], "a": "Aldehyde" },
+                    { "q": "Ethyl alcohol can be converted to acetic acid by:", "o": ["Oxidation", "Reduction", "Hydrolysis", "Dehydration"], "a": "Oxidation" },
+                    { "q": "The polymer of ethene is:", "o": ["Polypropene", "Polystyrene", "Polyethene", "PVC"], "a": "Polyethene" },
+                    { "q": "Which is the simplest amino acid?", "o": ["Alanine", "Glycine", "Valine", "Serine"], "a": "Glycine" },
+                    { "q": "Which vitamin is also known as ascorbic acid?", "o": ["Vitamin A", "Vitamin B", "Vitamin C", "Vitamin D"], "a": "Vitamin C" },
+                    { "q": "Aspirin is an ester of:", "o": ["Acetic acid", "Benzoic acid", "Salicylic acid", "Formic acid"], "a": "Salicylic acid" },
+                    { "q": "Urea is an example of:", "o": ["Amide", "Amine", "Nitrile", "Alcohol"], "a": "Amide" },
+                    { "q": "Which of the following is aromatic?", "o": ["Cyclohexane", "Benzene", "Hexane", "Pentane"], "a": "Benzene" },
+                    { "q": "Which compound is obtained by fermentation of glucose?", "o": ["Methanol", "Ethanol", "Acetone", "Glycerol"], "a": "Ethanol" },
+                    { "q": "The functional group –COOH represents:", "o": ["Carboxylic acid", "Ester", "Alcohol", "Ether"], "a": "Carboxylic acid" },
+                    { "q": "Which of the following compounds is used in mothballs?", "o": ["Camphor", "Naphthalene", "Benzaldehyde", "Toluene"], "a": "Naphthalene" },
+                    { "q": "Which hydrocarbon is called 'marsh gas'?", "o": ["Ethane", "Methane", "Propane", "Butane"], "a": "Methane" },
+                    { "q": "Ethyl chloride reacts with alcoholic KOH to give:", "o": ["Ethanol", "Ethene", "Ethane", "Methane"], "a": "Ethene" },
+                    { "q": "Phenol on reaction with NaOH gives:", "o": ["C6H5ONa", "C6H6", "C6H5Cl", "C6H5NO2"], "a": "C6H5ONa" },
+                    { "q": "Which monomer forms Teflon?", "o": ["Vinyl chloride", "Tetrafluoroethylene", "Styrene", "Ethene"], "a": "Tetrafluoroethylene" },
+                    { "q": "Which compound gives yellow ppt. with ammoniacal AgNO₃?", "o": ["Chloroform", "Iodoform", "Methanol", "Ethanol"], "a": "Iodoform" }
+                ],
+                "Chemical_Kinetics": [
+                    { "q": "For a zero-order reaction, rate is proportional to:", "o": ["[A]", "[A]²", "Independent of [A]", "1/[A]"], "a": "Independent of [A]" },
+                    { "q": "In Arrhenius equation, the slope of log k vs 1/T graph is:", "o": ["Ea/2.303R", "-Ea/2.303R", "2.303R/Ea", "R/2.303Ea"], "a": "-Ea/2.303R" },
+                    { "q": "Half-life of a first-order reaction depends on:", "o": ["Initial concentration", "Rate constant", "Pressure", "Temperature only"], "a": "Rate constant" },
+                    { "q": "The unit of rate constant for second-order reaction is:", "o": ["s⁻¹", "mol⁻¹ L s⁻¹", "mol L⁻¹ s⁻¹", "L mol⁻¹ s⁻¹"], "a": "L mol⁻¹ s⁻¹" },
+                    { "q": "For a first-order reaction, plot of ln[A] vs time is:", "o": ["Parabola", "Straight line", "Exponential", "Hyperbola"], "a": "Straight line" },
+                    { "q": "Which order reaction has constant half-life?", "o": ["Zero", "First", "Second", "Third"], "a": "First" },
+                    { "q": "If temperature increases, rate constant:", "o": ["Increases", "Decreases", "Remains constant", "Becomes zero"], "a": "Increases" },
+                    { "q": "Catalysts increase reaction rate by:", "o": ["Increasing activation energy", "Decreasing activation energy", "Changing ΔH", "Changing equilibrium"], "a": "Decreasing activation energy" },
+                    { "q": "Collision theory assumes molecules are:", "o": ["Stationary", "Hard spheres", "Point particles", "Elastic"], "a": "Hard spheres" },
+                    { "q": "In a reaction A → B, rate doubles when [A] doubles. Order is:", "o": ["Zero", "First", "Second", "Fractional"], "a": "First" },
+                    { "q": "If half-life of a reaction is independent of concentration, order is:", "o": ["Zero", "First", "Second", "Fractional"], "a": "First" },
+                    { "q": "Rate of reaction is directly proportional to:", "o": ["Concentration of reactants", "Products", "Temperature only", "Catalyst only"], "a": "Concentration of reactants" },
+                    { "q": "The slowest step in reaction mechanism is called:", "o": ["Rate-determining step", "Equilibrium step", "Catalytic step", "Activation step"], "a": "Rate-determining step" },
+                    { "q": "If k = 0.693/t½, the reaction order is:", "o": ["Zero", "First", "Second", "Third"], "a": "First" },
+                    { "q": "Arrhenius equation relates k with:", "o": ["T", "Ea", "A", "All of these"], "a": "All of these" },
+                    { "q": "The reaction between NO and O₂ → NO₂ is of order:", "o": ["1", "2", "3", "0"], "a": "2" },
+                    { "q": "Which factor does not affect rate of reaction?", "o": ["Temperature", "Concentration", "Nature of reactants", "Avogadro constant"], "a": "Avogadro constant" },
+                    { "q": "In chemical kinetics, unit of rate is:", "o": ["mol L⁻¹ s⁻¹", "s⁻¹", "mol L⁻¹", "mol"], "a": "mol L⁻¹ s⁻¹" },
+                    { "q": "If rate = k[A][B], overall order is:", "o": ["1", "2", "0", "3"], "a": "2" },
+                    { "q": "In zero-order reactions, half-life is proportional to:", "o": ["[A]₀", "1/[A]₀", "√[A]₀", "Independent"], "a": "[A]₀" }
+                ],
+                "S_and_P_Block_Elements": [
+                    { "q": "Which alkali metal is liquid at room temperature?", "o": ["Na", "K", "Rb", "Cs"], "a": "Cs" },
+                    { "q": "Which alkali metal gives golden flame color?", "o": ["Na", "K", "Rb", "Cs"], "a": "Na" },
+                    { "q": "Which alkaline earth metal is radioactive?", "o": ["Be", "Mg", "Ra", "Ca"], "a": "Ra" },
+                    { "q": "Na₂CO₃ is known as:", "o": ["Washing soda", "Baking soda", "Caustic soda", "Soda lime"], "a": "Washing soda" },
+                    { "q": "NaHCO₃ is used as:", "o": ["Baking soda", "Washing soda", "Bleaching powder", "Quicklime"], "a": "Baking soda" },
+                    { "q": "Which element is called 'stranger gas'?", "o": ["Neon", "Xenon", "Argon", "Krypton"], "a": "Xenon" },
+                    { "q": "Which group 14 element is used in semiconductors?", "o": ["C", "Si", "Ge", "Sn"], "a": "Si" },
+                    { "q": "Which halogen is liquid at room temperature?", "o": ["Cl", "Br", "I", "F"], "a": "Br" },
+                    { "q": "Bleaching powder contains:", "o": ["CaOCl₂", "Ca(OH)₂", "CaCl₂", "CaCO₃"], "a": "CaOCl₂" },
+                    { "q": "Which noble gas is used in advertising sign boards?", "o": ["He", "Ne", "Ar", "Kr"], "a": "Ne" },
+                    { "q": "Which alkaline earth metal is present in chlorophyll?", "o": ["Ca", "Mg", "Ba", "Sr"], "a": "Mg" },
+                    { "q": "Which halogen is strongest oxidising agent?", "o": ["Cl₂", "Br₂", "I₂", "F₂"], "a": "F₂" },
+                    { "q": "Which compound is known as quicklime?", "o": ["CaO", "Ca(OH)₂", "CaCO₃", "CaSO₄"], "a": "CaO" },
+                    { "q": "Which noble gas forms compounds with fluorine?", "o": ["He", "Ne", "Xe", "Ar"], "a": "Xe" },
+                    { "q": "Ozone is an allotrope of:", "o": ["Carbon", "Oxygen", "Sulphur", "Nitrogen"], "a": "Oxygen" },
+                    { "q": "Which element forms maximum number of oxoacids?", "o": ["S", "N", "P", "Cl"], "a": "Cl" },
+                    { "q": "Which oxide of nitrogen is laughing gas?", "o": ["NO", "N₂O", "NO₂", "N₂O₅"], "a": "N₂O" },
+                    { "q": "Which halogen acid is strongest?", "o": ["HF", "HCl", "HBr", "HI"], "a": "HI" },
+                    { "q": "Which noble gas has lowest boiling point?", "o": ["He", "Ne", "Ar", "Xe"], "a": "He" },
+                    { "q": "Which s-block element is stored under kerosene?", "o": ["Li", "Na", "Ca", "Ba"], "a": "Na" }
+                ],
+                "Thermodynamics": [
+                    { "q": "The first law of thermodynamics is a statement of:", "o": ["Entropy", "Conservation of mass", "Conservation of energy", "Enthalpy"], "a": "Conservation of energy" },
+                    { "q": "Work done in an isothermal reversible expansion of an ideal gas is:", "o": ["nRT ln(Vf/Vi)", "nRΔT", "PΔV", "Zero"], "a": "nRT ln(Vf/Vi)" },
+                    { "q": "In adiabatic process, heat exchange q is:", "o": ["Positive", "Negative", "Zero", "Infinite"], "a": "Zero" },
+                    { "q": "For an ideal gas in isochoric process, work done is:", "o": ["Zero", "nRT ln(Vf/Vi)", "PΔV", "q"], "a": "Zero" },
+                    { "q": "Internal energy of an ideal gas depends only on:", "o": ["Pressure", "Volume", "Temperature", "Entropy"], "a": "Temperature" },
+                    { "q": "The enthalpy change at constant pressure is equal to:", "o": ["q", "w", "ΔU", "ΔS"], "a": "q" },
+                    { "q": "The SI unit of entropy is:", "o": ["J mol⁻¹ K⁻¹", "J mol⁻¹", "J K⁻¹", "Cal mol⁻¹"], "a": "J mol⁻¹ K⁻¹" },
+                    { "q": "The spontaneity of a reaction is determined by:", "o": ["ΔH", "ΔS", "ΔG", "ΔU"], "a": "ΔG" },
+                    { "q": "ΔG = 0 corresponds to:", "o": ["Spontaneous process", "Non-spontaneous process", "Equilibrium", "Impossible process"], "a": "Equilibrium" },
+                    { "q": "Entropy of the universe always:", "o": ["Increases", "Decreases", "Remains same", "Zero"], "a": "Increases" },
+                    { "q": "In a reversible process, entropy change of the system is:", "o": ["Maximum", "Minimum", "Zero", "Positive"], "a": "Zero" },
+                    { "q": "The heat change at constant volume is equal to:", "o": ["ΔU", "ΔH", "w", "ΔS"], "a": "ΔU" },
+                    { "q": "Second law of thermodynamics deals with:", "o": ["Internal energy", "Entropy", "Enthalpy", "Work"], "a": "Entropy" },
+                    { "q": "If ΔH < 0 and ΔS > 0, then the reaction is:", "o": ["Always spontaneous", "Always non-spontaneous", "Equilibrium", "Impossible"], "a": "Always spontaneous" },
+                    { "q": "Standard enthalpy of formation of any element in its standard state is:", "o": ["1", "0", "Negative", "Positive"], "a": "0" },
+                    { "q": "In endothermic reactions, ΔH is:", "o": ["Positive", "Negative", "Zero", "None"], "a": "Positive" },
+                    { "q": "The Carnot engine efficiency depends on:", "o": ["Working substance", "Temperatures of reservoirs", "Pressure", "Entropy"], "a": "Temperatures of reservoirs" },
+                    { "q": "State function among the following is:", "o": ["q", "w", "ΔU", "Path"], "a": "ΔU" },
+                    { "q": "The maximum work obtained from a system is equal to:", "o": ["ΔH", "ΔS", "ΔG", "ΔU"], "a": "ΔG" },
+                    { "q": "For an isolated system, ΔU is:", "o": ["Zero", "Positive", "Negative", "Infinite"], "a": "Zero" }
+                ]
+            },
+            "JEE Mathematics": {
+                "Algebra": [
+                    { "q": "If α and β are the roots of x² - 5x + 6 = 0, then αβ equals:", "o": ["6", "5", "11", "1"], "a": "6" },
+                    { "q": "If x² + 2x + 1 = 0, then the roots are:", "o": ["-1, -1", "1, 1", "0, -1", "2, -2"], "a": "-1, -1" },
+                    { "q": "The sum of the roots of x² - 7x + 12 = 0 is:", "o": ["-7", "7", "12", "19"], "a": "7" },
+                    { "q": "If one root of the quadratic equation 2x² + 3x + k = 0 is -1, then k is:", "o": ["1", "-1", "2", "-2"], "a": "1" },
+                    { "q": "The discriminant of the quadratic equation x² - 4x + 4 = 0 is:", "o": ["16", "8", "0", "4"], "a": "0" },
+                    { "q": "If α and β are roots of x² + 3x + 2 = 0, then 1/α + 1/β equals:", "o": ["3", "2", "1", "-1"], "a": "3" },
+                    { "q": "The quadratic equation whose roots are 2 and 3 is:", "o": ["x² - 5x + 6 = 0", "x² + 5x + 6 = 0", "x² - 6x + 5 = 0", "x² + 6x + 5 = 0"], "a": "x² - 5x + 6 = 0" },
+                    { "q": "If α and β are roots of x² - 6x + 5 = 0, then α² + β² equals:", "o": ["36", "26", "16", "11"], "a": "26" },
+                    { "q": "The nature of roots of x² + 4x + 5 = 0 is:", "o": ["Real and distinct", "Real and equal", "Imaginary", "None"], "a": "Imaginary" },
+                    { "q": "If α and β are roots of x² - x - 6 = 0, then equation with roots α² and β² is:", "o": ["x² - 13x + 36 = 0", "x² - 7x + 12 = 0", "x² - 11x + 30 = 0", "x² - 10x + 25 = 0"], "a": "x² - 13x + 36 = 0" },
+                    { "q": "If the roots of ax² + bx + c = 0 are equal, then:", "o": ["b² = 4ac", "b² < 4ac", "b² > 4ac", "a + b + c = 0"], "a": "b² = 4ac" },
+                    { "q": "The quadratic equation with roots (2, -3) is:", "o": ["x² + x - 6 = 0", "x² - x - 6 = 0", "x² + 5x - 6 = 0", "x² - 5x - 6 = 0"], "a": "x² + x - 6 = 0" },
+                    { "q": "If roots of x² - kx + 9 = 0 are equal, then k is:", "o": ["0", "6", "±6", "9"], "a": "±6" },
+                    { "q": "The quadratic equation with roots -2 and 5 is:", "o": ["x² - 3x - 10 = 0", "x² + 3x - 10 = 0", "x² - 7x + 10 = 0", "x² - 7x - 10 = 0"], "a": "x² - 3x - 10 = 0" },
+                    { "q": "If α and β are roots of 2x² - 3x + 1 = 0, then α + β equals:", "o": ["3/2", "1/2", "2", "3"], "a": "3/2" },
+                    { "q": "If α and β are roots of 3x² - 5x + 2 = 0, then αβ equals:", "o": ["2/3", "5/3", "3/2", "1"], "a": "2/3" },
+                    { "q": "The roots of x² - 9 = 0 are:", "o": ["±3", "3, -2", "9, -9", "±√3"], "a": "±3" },
+                    { "q": "If α and β are roots of x² - 2x + 1 = 0, then (α - β)² equals:", "o": ["4", "0", "1", "2"], "a": "0" },
+                    { "q": "The quadratic equation with roots 1/2 and 1/3 is:", "o": ["6x² - 5x + 1 = 0", "6x² + 5x - 1 = 0", "3x² - 5x + 2 = 0", "6x² - 7x + 1 = 0"], "a": "6x² - 5x + 1 = 0" },
+                    { "q": "If the roots of x² + (p+q)x + pq = 0 are real, then:", "o": ["p = q", "p ≠ q", "p and q must be real", "Discriminant ≥ 0"], "a": "Discriminant ≥ 0" }
+                ],
+                "Trigonometry_and_Inverse_Trigonometry": [
+                    { "q": "sin²θ + cos²θ =", "o": ["0", "1", "2", "sin 2θ"], "a": "1" },
+                    { "q": "tan θ = sin θ / cos θ is:", "o": ["True", "False", "Sometimes true", "Never true"], "a": "True" },
+                    { "q": "If tan θ = 1, then θ =", "o": ["0°", "30°", "45°", "60°"], "a": "45°" },
+                    { "q": "sin 30° equals:", "o": ["1/2", "√3/2", "√2/2", "1"], "a": "1/2" },
+                    { "q": "cos 60° equals:", "o": ["0", "1/2", "√3/2", "1"], "a": "1/2" },
+                    { "q": "tan 45° =", "o": ["0", "1", "√3", "∞"], "a": "1" },
+                    { "q": "cot 30° =", "o": ["√3", "1/√3", "1", "2"], "a": "√3" },
+                    { "q": "sec²θ - tan²θ equals:", "o": ["1", "0", "sin θ", "cos θ"], "a": "1" },
+                    { "q": "If sin θ = 3/5, cos θ is:", "o": ["4/5", "5/4", "√(1 - (9/25))", "None"], "a": "4/5" },
+                    { "q": "sin 2θ =", "o": ["2sin θ cos θ", "cos²θ - sin²θ", "tan θ", "sec θ"], "a": "2sin θ cos θ" },
+                    { "q": "cos 2θ =", "o": ["cos²θ - sin²θ", "1 - 2sin²θ", "2cos²θ - 1", "All of these"], "a": "All of these" },
+                    { "q": "If tan A = 3/4, then sin A =", "o": ["3/4", "4/5", "3/5", "5/4"], "a": "3/5" },
+                    { "q": "arcsin(1) =", "o": ["π/4", "π/2", "0", "π"], "a": "π/2" },
+                    { "q": "arccos(0) =", "o": ["0", "π/4", "π/2", "π"], "a": "π/2" },
+                    { "q": "arctan(√3) =", "o": ["π/3", "π/4", "π/6", "π/2"], "a": "π/3" },
+                    { "q": "arccos(1/2) =", "o": ["π/3", "π/6", "π/2", "π/4"], "a": "π/3" },
+                    { "q": "arcsin(0) =", "o": ["0", "π/2", "π", "Undefined"], "a": "0" },
+                    { "q": "sin(π - θ) =", "o": ["sin θ", "-sin θ", "cos θ", "-cos θ"], "a": "sin θ" },
+                    { "q": "cos(π - θ) =", "o": ["cos θ", "-cos θ", "sin θ", "-sin θ"], "a": "-cos θ" },
+                    { "q": "tan(π + θ) =", "o": ["tan θ", "-tan θ", "cot θ", "-cot θ"], "a": "tan θ" }
+                ],
+                "Coordinate_Geometry": [
+                    { "q": "The slope of the line 2x - 3y + 6 = 0 is:", "o": ["2/3", "-2/3", "3/2", "-3/2"], "a": "2/3" },
+                    { "q": "The distance between points (0,0) and (3,4) is:", "o": ["5", "7", "4", "6"], "a": "5" },
+                    { "q": "Equation of x-axis is:", "o": ["x = 0", "y = 0", "y = x", "y = 1"], "a": "y = 0" },
+                    { "q": "Equation of y-axis is:", "o": ["y = 0", "x = 0", "x = 1", "y = x"], "a": "x = 0" },
+                    { "q": "The slope of a line parallel to x-axis is:", "o": ["0", "1", "∞", "-1"], "a": "0" },
+                    { "q": "The slope of a line perpendicular to x-axis is:", "o": ["0", "∞", "1", "-1"], "a": "∞" },
+                    { "q": "The midpoint of (2,4) and (6,8) is:", "o": ["(4,6)", "(8,12)", "(3,6)", "(5,7)"], "a": "(4,6)" },
+                    { "q": "The distance between (1,2) and (4,6) is:", "o": ["5", "4", "3", "6"], "a": "5" },
+                    { "q": "The centroid of triangle with vertices (0,0), (6,0), (0,6) is:", "o": ["(2,2)", "(3,3)", "(1,1)", "(6,6)"], "a": "(2,2)" },
+                    { "q": "Equation of line through (0,0) with slope 2 is:", "o": ["y = 2x", "x = 2y", "y = x/2", "2x + y = 0"], "a": "y = 2x" },
+                    { "q": "Equation of line with slope -1 passing through (2,3) is:", "o": ["y - 3 = -(x - 2)", "y + 3 = -(x + 2)", "y = -x + 5", "Both 1 and 3"], "a": "Both 1 and 3" },
+                    { "q": "Equation of circle with centre (0,0) and radius 5 is:", "o": ["x² + y² = 25", "x² + y² = 5", "x² + y² = 10", "x² + y² = 50"], "a": "x² + y² = 25" },
+                    { "q": "Equation of parabola with vertex at origin and axis along x-axis is:", "o": ["y² = 4ax", "x² = 4ay", "y² = 2ax", "x² = 2ay"], "a": "y² = 4ax" },
+                    { "q": "Equation of parabola with vertex at origin and axis along y-axis is:", "o": ["x² = 4ay", "y² = 4ax", "x² = ay", "y² = ax"], "a": "x² = 4ay" },
+                    { "q": "Equation of ellipse with centre at origin and major axis along x-axis is:", "o": ["x²/a² + y²/b² = 1", "y²/a² + x²/b² = 1", "x²/b² + y²/a² = 1", "None"], "a": "x²/a² + y²/b² = 1" },
+                    { "q": "Equation of ellipse with centre at origin and major axis along y-axis is:", "o": ["y²/a² + x²/b² = 1", "x²/a² + y²/b² = 1", "y²/b² + x²/a² = 1", "None"], "a": "y²/a² + x²/b² = 1" },
+                    { "q": "Equation of hyperbola with transverse axis along x-axis is:", "o": ["x²/a² - y²/b² = 1", "y²/a² - x²/b² = 1", "x²/b² - y²/a² = 1", "None"], "a": "x²/a² - y²/b² = 1" },
+                    { "q": "Equation of hyperbola with transverse axis along y-axis is:", "o": ["y²/a² - x²/b² = 1", "x²/a² - y²/b² = 1", "y²/b² - x²/a² = 1", "None"], "a": "y²/a² - x²/b² = 1" },
+                    { "q": "The eccentricity of a circle is:", "o": ["0", "1", "∞", "Undefined"], "a": "0" },
+                    { "q": "The eccentricity of a parabola is:", "o": ["0", "1", "∞", "2"], "a": "1" }
+                ],
+                "Differential_Calculus": [
+                    { "q": "If y = x², then dy/dx =", "o": ["x", "2x", "x²", "2"], "a": "2x" },
+                    { "q": "The derivative of sin x with respect to x is:", "o": ["cos x", "-cos x", "-sin x", "1"], "a": "cos x" },
+                    { "q": "d/dx (e^x) equals:", "o": ["e^x", "x e^x", "1", "ln x"], "a": "e^x" },
+                    { "q": "If y = ln x, then dy/dx =", "o": ["1/x", "x", "ln x", "0"], "a": "1/x" },
+                    { "q": "The derivative of cos x is:", "o": ["-sin x", "sin x", "cos x", "-cos x"], "a": "-sin x" },
+                    { "q": "d/dx (tan x) =", "o": ["sec²x", "cosec²x", "cos²x", "sec x"], "a": "sec²x" },
+                    { "q": "If y = x³, then dy/dx =", "o": ["x²", "3x²", "3x", "x³"], "a": "3x²" },
+                    { "q": "The derivative of a constant is:", "o": ["1", "0", "Constant", "Undefined"], "a": "0" },
+                    { "q": "d/dx (x^n) =", "o": ["n x^(n-1)", "x^n", "n x^n", "x^(n-1)"], "a": "n x^(n-1)" },
+                    { "q": "If y = log₁₀x, then dy/dx =", "o": ["1/x", "1/(x ln 10)", "ln x", "10/x"], "a": "1/(x ln 10)" },
+                    { "q": "The slope of tangent to y = x² at x = 2 is:", "o": ["2", "4", "8", "6"], "a": "4" },
+                    { "q": "If y = e^(2x), then dy/dx =", "o": ["2e^(2x)", "e^x", "2e^x", "e^(2x)"], "a": "2e^(2x)" },
+                    { "q": "d/dx (cot x) =", "o": ["-cosec²x", "sec²x", "cos²x", "-sec²x"], "a": "-cosec²x" },
+                    { "q": "If y = sin(2x), then dy/dx =", "o": ["2cos(2x)", "cos(2x)", "2sin(2x)", "-2sin(2x)"], "a": "2cos(2x)" },
+                    { "q": "d/dx (x e^x) =", "o": ["e^x", "e^x(1+x)", "x e^x", "x"], "a": "e^x(1+x)" },
+                    { "q": "The derivative of |x| for x > 0 is:", "o": ["1", "-1", "0", "Undefined"], "a": "1" },
+                    { "q": "If y = x² + 3x + 2, then dy/dx =", "o": ["2x + 3", "2x + 2", "x + 3", "x + 2"], "a": "2x + 3" },
+                    { "q": "The slope of tangent to y = √x at x = 4 is:", "o": ["1/4", "1/2", "1/√x", "1/(2√x)"], "a": "1/4" },
+                    { "q": "d/dx (ln (x²)) =", "o": ["2/x", "1/x²", "1/x", "2x"], "a": "2/x" },
+                    { "q": "If y = sin x cos x, then dy/dx =", "o": ["cos²x - sin²x", "sin²x + cos²x", "2sin x cos x", "1"], "a": "cos²x - sin²x" }
+                ]
+            },
+            "University Maths": {
+                "Matrices": [
+                    { "q": "Find the inverse of A = [[2, 1], [5, 3]] using elementary row transformations.", "o": ["[[3, -1], [-5, 2]]", "[[3, -1], [5, -2]]", "[[-3, 1], [5, -2]]", "[[1, 0], [0, 1]]"], "a": "[[3, -1], [-5, 2]]" },
+                    { "q": "Rank of [[1, 2, 3], [2, 4, 6], [1, 1, 1]] is:", "o": ["1", "2", "3", "0"], "a": "2" },
+                    { "q": "If AX = B has a unique solution, then rank(A) is:", "o": ["< number of unknowns", "= number of unknowns", "> number of unknowns", "None"], "a": "= number of unknowns" },
+                    { "q": "Solve system: 2x+y=5, 3x+2y=8.", "o": ["x=1, y=3", "x=2, y=1", "x=3, y=-1", "x=0, y=0"], "a": "x=2, y=1" },
+                    { "q": "Eigenvalues of [[4, 0], [0, 5]] are:", "o": ["1,2", "4,5", "9,0", "-4,-5"], "a": "4,5" },
+                    { "q": "If λ is eigenvalue of A, then 1/λ is eigenvalue of:", "o": ["A", "A²", "A⁻¹", "A+I"], "a": "A⁻¹" },
+                    { "q": "For A=[[0,1],[-2,-3]], eigenvalues are:", "o": ["-1,-2", "1,-2", "-1,-3", "2,3"], "a": "-1,-2" },
+                    { "q": "Cayley–Hamilton theorem states:", "o": ["Every matrix satisfies its own characteristic equation", "det(A)=0", "tr(A)=0", "A=I"], "a": "Every matrix satisfies its own characteristic equation" },
+                    { "q": "Characteristic polynomial of [[1,2],[3,4]] is:", "o": ["λ² -5λ -2", "λ² -5λ +2", "λ² - λ +1", "λ²+5"], "a": "λ² -5λ -2" },
+                    { "q": "If A has rank 3 in a 4×4 matrix, then nullity is:", "o": ["0", "1", "2", "3"], "a": "1" },
+                    { "q": "The rank of identity matrix Iₙ is:", "o": ["0", "n", "n-1", "Depends"], "a": "n" },
+                    { "q": "If A is symmetric, eigenvalues are:", "o": ["Always real", "Always complex", "Always integers", "None"], "a": "Always real" },
+                    { "q": "The determinant of orthogonal matrix is:", "o": ["0", "1 or -1", "2", "None"], "a": "1 or -1" },
+                    { "q": "Inverse of diagonal matrix D is:", "o": ["Diagonal with reciprocal entries", "Upper triangular", "Lower triangular", "None"], "a": "Diagonal with reciprocal entries" },
+                    { "q": "Rank of zero matrix is:", "o": ["n", "0", "Undefined", "Depends"], "a": "0" },
+                    { "q": "Trace of a matrix equals:", "o": ["Sum of eigenvalues", "Product of eigenvalues", "Rank", "Determinant"], "a": "Sum of eigenvalues" },
+                    { "q": "If A²=I, eigenvalues are:", "o": ["1,-1", "0,1", "0,-1", "2,3"], "a": "1,-1" },
+                    { "q": "If A is orthogonal, then A⁻¹ =", "o": ["A", "Aᵀ", "-A", "det(A)"], "a": "Aᵀ" },
+                    { "q": "Adjoint(A) * A =", "o": ["det(A)I", "A", "I", "0"], "a": "det(A)I" },
+                    { "q": "If eigenvalues of A are 2 and 3, eigenvalues of A² are:", "o": ["2,3", "4,9", "6,5", "0"], "a": "4,9" }
+                ],
+
+                "Differential Calculus I": [
+                    { "q": "Leibnitz theorem is for:", "o": ["nth derivative of product", "nth derivative of quotient", "nth derivative of composite", "None"], "a": "nth derivative of product" },
+                    { "q": "If y=(x²+1)³, find dy/dx.", "o": ["6x(x²+1)²", "3(x²+1)²", "x(x²+1)", "None"], "a": "6x(x²+1)²" },
+                    { "q": "Euler’s theorem for homogeneous functions states:", "o": ["x∂f/∂x + y∂f/∂y = n f(x,y)", "f=0", "df/dx=0", "None"], "a": "x∂f/∂x + y∂f/∂y = n f(x,y)" },
+                    { "q": "If f(x,y)=x³+y³, degree of homogeneity:", "o": ["2", "3", "6", "1"], "a": "3" },
+                    { "q": "Total derivative dz/dx if z=f(x,y), y=g(x):", "o": ["∂z/∂x + (∂z/∂y)(dy/dx)", "dz/dy", "∂z/∂x", "None"], "a": "∂z/∂x + (∂z/∂y)(dy/dx)" },
+                    { "q": "If y=x² ln(x), then dy/dx=", "o": ["2x ln(x)+x", "2x ln(x)", "x ln(x)", "None"], "a": "2x ln(x)+x" },
+                    { "q": "nth derivative of e^(ax) sin(bx) is:", "o": ["(√a²+b²)^n e^(ax) sin(bx+nθ)", "n! e^(ax)", "aⁿ e^(ax)", "None"], "a": "(√a²+b²)^n e^(ax) sin(bx+nθ)" },
+                    { "q": "If f(x,y)=x²+y², Euler’s theorem gives:", "o": ["2(x²+y²)", "2f(x,y)", "f=0", "None"], "a": "2f(x,y)" },
+                    { "q": "If z=sin(xy), dz/dx=", "o": ["y cos(xy)", "x cos(xy)", "cos(xy)", "None"], "a": "y cos(xy)" },
+                    { "q": "If z=ln(x²+y²), dz/dx=", "o": ["2x/(x²+y²)", "x/(x²+y²)", "y/(x²+y²)", "None"], "a": "2x/(x²+y²)" },
+                    { "q": "If f(x)=xⁿ, nth derivative is:", "o": ["0", "n!", "n!/(x)", "None"], "a": "n!" },
+                    { "q": "If f(x,y)=x³y², degree:", "o": ["5", "3", "2", "6"], "a": "5" },
+                    { "q": "If f(x)=sin(x), f''(x)+f(x)=", "o": ["0", "1", "cos(x)", "None"], "a": "0" },
+                    { "q": "If u=x²y+y²z+z²x, then ∂u/∂x=", "o": ["2xy+z²", "y²+2xz", "2x+y²", "None"], "a": "2xy+z²" },
+                    { "q": "If y=x^x, dy/dx=", "o": ["x^x(ln(x)+1)", "ln(x)", "x^(x-1)", "None"], "a": "x^x(ln(x)+1)" },
+                    { "q": "If y=tan⁻¹(x), dy/dx=", "o": ["1/(1+x²)", "x²", "1/x", "None"], "a": "1/(1+x²)" },
+                    { "q": "d/dx (log_e(sin x))=", "o": ["cot x", "cosec x", "sec x", "None"], "a": "cot x" },
+                    { "q": "If f(x,y)=e^(x+y), total derivative df/dx=", "o": ["e^(x+y)(1+dy/dx)", "e^(x+y)", "1", "None"], "a": "e^(x+y)(1+dy/dx)" },
+                    { "q": "If y=x³, d²y/dx²=", "o": ["6x", "3x²", "x³", "None"], "a": "6x" },
+                    { "q": "If u=ln(xy), ∂u/∂x=", "o": ["1/x", "1/y", "x", "None"], "a": "1/x" }
+                ],
+
+                "Differential Calculus II": [
+                    { "q": "Maclaurin series of cos(x) up to x⁴:", "o": ["1 - x²/2 + x⁴/24", "1 + x²/2", "x - x³/6", "None"], "a": "1 - x²/2 + x⁴/24" },
+                    { "q": "Taylor series expansion of ln(1+x) about 0:", "o": ["x - x²/2 + x³/3 - ...", "1+x", "e^x", "None"], "a": "x - x²/2 + x³/3 - ..." },
+                    { "q": "Maclaurin expansion of e^x up to x³:", "o": ["1+x+x²/2+x³/6", "1+x²", "x³", "None"], "a": "1+x+x²/2+x³/6" },
+                    { "q": "Lagrange multipliers method is used to:", "o": ["Find maxima/minima under constraint", "Solve DE", "Expand polynomials", "None"], "a": "Find maxima/minima under constraint" },
+                    { "q": "Expand sin(x) up to x³ term:", "o": ["x - x³/6", "x+x²", "1+x", "None"], "a": "x - x³/6" },
+                    { "q": "If f(x)=tan⁻¹(x), Maclaurin series:", "o": ["x - x³/3 + x⁵/5 - ...", "1+x", "ln(1+x)", "None"], "a": "x - x³/3 + x⁵/5 - ..." },
+                    { "q": "Taylor series of e^x at a=1:", "o": ["e(1+(x-1)+(x-1)²/2!+...)", "1+x", "ln(x)", "None"], "a": "e(1+(x-1)+(x-1)²/2!+...)" },
+                    { "q": "Maclaurin series for ln(1+x):", "o": ["x-x²/2+x³/3-...", "1+x", "e^x", "None"], "a": "x-x²/2+x³/3-..." },
+                    { "q": "f(x,y)=x²+y² subject to x+y=1, min value:", "o": ["1/2", "1", "0", "2"], "a": "1/2" },
+                    { "q": "If constraint is g(x,y)=x²+y²-1=0, method is:", "o": ["Lagrange multipliers", "Substitution", "Taylor", "None"], "a": "Lagrange multipliers" },
+                    { "q": "Max of f(x,y)=xy subject to x²+y²=1:", "o": ["1/2", "1", "0", "2"], "a": "1/2" },
+                    { "q": "Expand cosh(x):", "o": ["1+x²/2!+x⁴/4!+...", "1+x", "cos(x)", "None"], "a": "1+x²/2!+x⁴/4!+..." },
+                    { "q": "Expand sinh(x):", "o": ["x+x³/3!+x⁵/5!+...", "1+x", "cos(x)", "None"], "a": "x+x³/3!+x⁵/5!+..." },
+                    { "q": "f(x)=ln(1+x), f''(0)=", "o": ["-1", "1", "0", "2"], "a": "-1" },
+                    { "q": "f(x)=cos(x), Maclaurin coefficient of x² term:", "o": ["-1/2", "1/2", "1", "0"], "a": "-1/2" },
+                    { "q": "Taylor expansion valid if f(x) is:", "o": ["Infinitely differentiable", "Continuous", "Integrable", "None"], "a": "Infinitely differentiable" },
+                    { "q": "Constraint optimization uses multiplier λ because:", "o": ["It encodes constraint", "It simplifies DE", "It cancels terms", "None"], "a": "It encodes constraint" },
+                    { "q": "f(x)=e^x, coefficient of x³ in Maclaurin:", "o": ["1/6", "1/3", "1/2", "None"], "a": "1/6" },
+                    { "q": "Expand ln(1-x) to x³:", "o": ["-x-x²/2-x³/3", "-x+x²/2-x³/3", "x-x²/2+x³/3", "None"], "a": "-x-x²/2-x³/3" },
+                    { "q": "Use Lagrange multipliers for f(x,y)=x²+y², g(x,y)=x²-y=0, solution is:", "o": ["x=0,y=0", "x=±1,y=1", "x=1,y=0", "None"], "a": "x=±1,y=1" }
+                ]
+            },
+
+            "University Chemistry": {
+                "MOT Allotropes Materials": [
+                    { "q": "According to Molecular Orbital Theory, the bond order of O₂ molecule is:", "o": ["1", "2", "3", "2.5"], "a": "2" },
+                    { "q": "Bond order of O₂⁺ is:", "o": ["2.5", "1.5", "3", "2"], "a": "2.5" },
+                    { "q": "Bond order of O₂⁻ is:", "o": ["1.5", "2.5", "2", "3"], "a": "1.5" },
+                    { "q": "Which of the following molecules is diamagnetic?", "o": ["O₂", "O₂⁻", "O₂²⁻", "B₂"], "a": "O₂²⁻" },
+                    { "q": "Which orbital has lower energy in O₂ according to MOT?", "o": ["σ(2px)", "π(2px)", "σ(2s)", "σ(1s)"], "a": "π(2px)" },
+                    { "q": "Diamond and graphite are:", "o": ["Allotropes of carbon", "Compounds", "Mixtures", "Polymers"], "a": "Allotropes of carbon" },
+                    { "q": "Graphite is a good conductor due to:", "o": ["Free π electrons", "Free protons", "σ bonds", "None"], "a": "Free π electrons" },
+                    { "q": "Which material has sp³ hybridization?", "o": ["Diamond", "Graphite", "Graphene", "C₆₀"], "a": "Diamond" },
+                    { "q": "Fullerene (C₆₀) has structure:", "o": ["Spherical", "Linear", "Sheet-like", "Amorphous"], "a": "Spherical" },
+                    { "q": "Which of the following is paramagnetic?", "o": ["N₂", "O₂", "CO", "F₂"], "a": "O₂" },
+                    { "q": "Bond order of N₂ is:", "o": ["2", "3", "1", "2.5"], "a": "3" },
+                    { "q": "Which allotrope of carbon is used as lubricant?", "o": ["Graphite", "Diamond", "Fullerene", "Charcoal"], "a": "Graphite" },
+                    { "q": "Which of the following is an amorphous form of carbon?", "o": ["Charcoal", "Graphite", "Diamond", "Graphene"], "a": "Charcoal" },
+                    { "q": "Band gap of diamond is:", "o": ["5.5 eV", "2 eV", "0 eV", "10 eV"], "a": "5.5 eV" },
+                    { "q": "Which orbital filling order is correct according to MOT?", "o": ["σ1s → σ*1s → σ2s → σ*2s → π2px, π2py → σ2pz", "σ1s → σ2s → σ*1s → π2px,π2py → σ2pz", "σ1s → σ*1s → π2px,π2py → σ2s", "None"], "a": "σ1s → σ*1s → σ2s → σ*2s → π2px, π2py → σ2pz" },
+                    { "q": "In MOT, the antibonding orbitals are represented by:", "o": ["*", "δ", "π", "σ"], "a": "*" },
+                    { "q": "Which of the following has zero bond order?", "o": ["He₂", "O₂²⁻", "B₂", "Li₂"], "a": "He₂" },
+                    { "q": "Which material is known as 'buckyball'?", "o": ["C₆₀", "Graphite", "Diamond", "Carbon black"], "a": "C₆₀" },
+                    { "q": "Which of the following is hardest material?", "o": ["Diamond", "Graphite", "Fullerene", "Coal"], "a": "Diamond" },
+                    { "q": "Bond order of CO molecule is:", "o": ["2", "2.5", "3", "1"], "a": "3" }
+                ],
+
+                "Spectroscopy and Stereoisomerism": [
+                    { "q": "In IR spectroscopy, the C=O stretching frequency appears near:", "o": ["1700 cm⁻¹", "2200 cm⁻¹", "2800 cm⁻¹", "1000 cm⁻¹"], "a": "1700 cm⁻¹" },
+                    { "q": "NMR spectroscopy is based on:", "o": ["Nuclear spin", "Electron spin", "Photon emission", "X-ray diffraction"], "a": "Nuclear spin" },
+                    { "q": "Number of NMR signals for ethanol (CH₃CH₂OH):", "o": ["1", "2", "3", "4"], "a": "3" },
+                    { "q": "Chiral molecules rotate plane polarized light due to:", "o": ["Optical activity", "Conjugation", "Hybridization", "Resonance"], "a": "Optical activity" },
+                    { "q": "A compound with two asymmetric carbons may have maximum stereoisomers:", "o": ["2", "4", "8", "16"], "a": "4" },
+                    { "q": "Enantiomers differ in:", "o": ["Optical rotation", "Melting point", "Boiling point", "Solubility"], "a": "Optical rotation" },
+                    { "q": "Diastereomers differ in:", "o": ["Physical properties", "Bond length only", "Spin", "Magnetism"], "a": "Physical properties" },
+                    { "q": "Which type of isomerism glucose and fructose exhibit?", "o": ["Functional group isomerism", "Chain isomerism", "Optical isomerism", "Geometrical"], "a": "Functional group isomerism" },
+                    { "q": "Which technique distinguishes cis and trans isomers?", "o": ["IR spectroscopy", "UV spectroscopy", "X-ray", "NMR"], "a": "NMR" },
+                    { "q": "In UV-Vis spectroscopy, π→π* transition occurs in:", "o": ["Conjugated systems", "Alkanes", "Saturated hydrocarbons", "None"], "a": "Conjugated systems" },
+                    { "q": "The splitting of signals in NMR is due to:", "o": ["Spin-spin coupling", "Vibration", "Bond polarity", "Electron delocalization"], "a": "Spin-spin coupling" },
+                    { "q": "Which stereoisomers are non-superimposable mirror images?", "o": ["Enantiomers", "Diastereomers", "Conformers", "None"], "a": "Enantiomers" },
+                    { "q": "Which stereoisomers are not mirror images?", "o": ["Diastereomers", "Enantiomers", "Conformers", "Resonance structures"], "a": "Diastereomers" },
+                    { "q": "Which of the following is optically inactive?", "o": ["Meso compounds", "Chiral molecules", "Racemic mixture", "Both A and C"], "a": "Both A and C" },
+                    { "q": "The n→π* transition occurs in:", "o": ["Carbonyls", "Alkanes", "Alkynes", "Aromatic"], "a": "Carbonyls" },
+                    { "q": "Which technique identifies functional groups directly?", "o": ["IR spectroscopy", "NMR", "UV", "Mass spectrometry"], "a": "IR spectroscopy" },
+                    { "q": "Geometrical isomerism arises due to:", "o": ["Restricted rotation", "Optical activity", "Conjugation", "Hyperconjugation"], "a": "Restricted rotation" },
+                    { "q": "In NMR, TMS is used as:", "o": ["Reference standard", "Solvent", "Indicator", "Oxidizing agent"], "a": "Reference standard" },
+                    { "q": "For a double bond, cis and trans isomers differ in:", "o": ["Dipole moment", "Bond energy", "Hybridization", "Resonance"], "a": "Dipole moment" },
+                    { "q": "Number of stereoisomers possible for tartaric acid is:", "o": ["2", "3", "4", "1"], "a": "3" }
+                ],
+
+                "Electrochemistry": [
+                    { "q": "Standard electrode potential of hydrogen electrode is taken as:", "o": ["0 V", "1 V", "2.303 V", "-1 V"], "a": "0 V" },
+                    { "q": "Nernst equation is used to calculate:", "o": ["Cell potential", "Resistance", "Capacitance", "Entropy"], "a": "Cell potential" },
+                    { "q": "For a redox reaction, ΔG° = -nFE°. This relates Gibbs energy to:", "o": ["Electrode potential", "Resistance", "Conductance", "None"], "a": "Electrode potential" },
+                    { "q": "Conductance is reciprocal of:", "o": ["Resistance", "Capacitance", "Potential", "Charge"], "a": "Resistance" },
+                    { "q": "Which electrolyte has highest conductivity?", "o": ["Strong acid", "Weak acid", "Pure water", "Alcohol"], "a": "Strong acid" },
+                    { "q": "Electrolytic cell converts:", "o": ["Electrical energy → Chemical energy", "Chemical → Electrical", "Heat → Work", "None"], "a": "Electrical energy → Chemical energy" },
+                    { "q": "Galvanic cell converts:", "o": ["Chemical energy → Electrical energy", "Heat → Work", "Electrical → Chemical", "None"], "a": "Chemical energy → Electrical energy" },
+                    { "q": "Which electrode is used in Daniell cell?", "o": ["Zn and Cu", "Fe and Cu", "Ag and Au", "Pt and H₂"], "a": "Zn and Cu" },
+                    { "q": "At anode, always occurs:", "o": ["Oxidation", "Reduction", "Neutralization", "Hydrolysis"], "a": "Oxidation" },
+                    { "q": "At cathode, always occurs:", "o": ["Reduction", "Oxidation", "Electrolysis", "Neutralization"], "a": "Reduction" },
+                    { "q": "Kohlrausch’s law deals with:", "o": ["Infinite dilution conductivity", "Electrode potential", "Entropy", "Heat"], "a": "Infinite dilution conductivity" },
+                    { "q": "Faraday’s first law of electrolysis states:", "o": ["Mass ∝ charge passed", "Mass ∝ resistance", "Mass ∝ potential", "None"], "a": "Mass ∝ charge passed" },
+                    { "q": "1 Faraday corresponds to:", "o": ["96500 C", "1 C", "1000 C", "10⁵ C"], "a": "96500 C" },
+                    { "q": "Which of the following increases conductivity?", "o": ["Increase in ion concentration", "Decrease in ions", "Adding solvent", "Cooling"], "a": "Increase in ion concentration" },
+                    { "q": "The electrode where electrons are supplied is:", "o": ["Cathode", "Anode", "Both", "None"], "a": "Cathode" },
+                    { "q": "Cell potential is given by:", "o": ["E°cell - (0.059/n) log Q", "IR drop", "nFE", "ΔG"], "a": "E°cell - (0.059/n) log Q" },
+                    { "q": "In concentration cell, Ecell arises due to:", "o": ["Concentration difference", "Electrode potential difference", "Current", "None"], "a": "Concentration difference" },
+                    { "q": "Primary cell is:", "o": ["Non-rechargeable", "Rechargeable", "Reversible", "None"], "a": "Non-rechargeable" },
+                    { "q": "Secondary cell is:", "o": ["Rechargeable", "Disposable", "Irreversible", "None"], "a": "Rechargeable" },
+                    { "q": "Fuel cell directly converts:", "o": ["Chemical energy to electrical", "Electrical to heat", "Mechanical to heat", "None"], "a": "Chemical energy to electrical" }
+                ]
+            },
+            
+            "Mechanical Engineering": {
+                "Introduction to Mechanics": [
+                    { "q": "A body of mass 10 kg is acted upon by two forces of 6 N and 8 N at right angles. The resultant acceleration is:", "o": ["1 m/s²", "0.5 m/s²", "√(10)/10 m/s²", "1.0√2 m/s²"], "a": "1 m/s²" },
+                    { "q": "The principle of transmissibility of forces states that:", "o": ["Force can be applied anywhere without effect", "Point of application of force does not matter as long as line of action remains same", "Force is independent of magnitude", "Force depends only on body shape"], "a": "Point of application of force does not matter as long as line of action remains same" },
+                    { "q": "A simply supported beam of span L carries a uniformly distributed load w per unit length. The maximum bending moment is:", "o": ["wL²/8", "wL²/12", "wL²/16", "wL²/24"], "a": "wL²/8" },
+                    { "q": "In planar motion, the instantaneous center of zero velocity (IC) is:", "o": ["A point where velocity is infinite", "A point on body with zero acceleration", "A point on body with zero velocity", "A point where torque vanishes"], "a": "A point on body with zero velocity" },
+                    { "q": "Moment of inertia of a solid cylinder of mass M and radius R about its axis is:", "o": ["MR²", "½MR²", "⅓MR²", "2/5 MR²"], "a": "½MR²" },
+                    { "q": "Work-energy principle states:", "o": ["Work done equals change in kinetic energy", "Work done equals momentum", "Work done equals force × displacement always", "Work done equals heat transfer"], "a": "Work done equals change in kinetic energy" },
+                    { "q": "A rigid body under planar motion has maximum degrees of freedom:", "o": ["6", "3", "2", "1"], "a": "3" },
+                    { "q": "In equilibrium of concurrent forces, which law is used?", "o": ["Varignon’s theorem", "Lami’s theorem", "Coulomb’s law", "Hooke’s law"], "a": "Lami’s theorem" },
+                    { "q": "The centroid of a semicircular area lies at a distance from the base equal to:", "o": ["4R/3π", "R/2", "2R/3", "3R/4"], "a": "4R/3π" },
+                    { "q": "If two forces act at a point and their resultant is maximum when the angle between them is:", "o": ["0°", "90°", "120°", "180°"], "a": "0°" },
+                    { "q": "A projectile is thrown with initial velocity u at angle θ. Its range on horizontal plane is:", "o": ["u²/g × sin2θ", "2u²/g × sinθ", "u²/2g × cos²θ", "u²/g × cos2θ"], "a": "u²/g × sin2θ" },
+                    { "q": "Unit of modulus of rigidity is:", "o": ["N", "N/m", "N/m²", "Nm"], "a": "N/m²" },
+                    { "q": "If a beam is subjected to pure bending, the neutral axis passes through:", "o": ["Top fiber", "Bottom fiber", "Centroid of section", "Random axis"], "a": "Centroid of section" },
+                    { "q": "Principle of virtual work is applied in:", "o": ["Static equilibrium problems", "Dynamic vibrations", "Fluid mechanics only", "Thermal expansion"], "a": "Static equilibrium problems" },
+                    { "q": "A truss member experiences only:", "o": ["Shear force", "Bending moment", "Axial force", "Torsion"], "a": "Axial force" },
+                    { "q": "Inertia force is considered in which analysis?", "o": ["Static analysis", "Dynamic analysis", "Fluid analysis", "Heat transfer"], "a": "Dynamic analysis" },
+                    { "q": "If Poisson’s ratio of a material is 0.5, then the material is:", "o": ["Rigid", "Compressible", "Incompressible", "Elastic"], "a": "Incompressible" },
+                    { "q": "Kinetic energy of rotating body is:", "o": ["½mv²", "½Iω²", "Iα²", "mgh"], "a": "½Iω²" },
+                    { "q": "Hooke’s law is valid up to:", "o": ["Fracture point", "Elastic limit", "Yield point", "Ultimate stress point"], "a": "Elastic limit" },
+                    { "q": "In static equilibrium, the sum of moments about any point is:", "o": ["Zero", "Equal to weight", "Constant", "Depends on torque"], "a": "Zero" }
+                ],
+
+                    "IC Engines Electric Vehicles": [
+                        { "q": "In a 4-stroke IC engine, the number of power strokes per revolution of crankshaft is:", "o": ["1", "2", "4", "½"], "a": "½" },
+                        { "q": "Otto cycle is used in:", "o": ["Diesel engines", "Petrol engines", "Gas turbines", "Steam turbines"], "a": "Petrol engines" },
+                        { "q": "The compression ratio in SI engines is generally:", "o": ["3-5", "6-10", "15-25", "25-30"], "a": "6-10" },
+                        { "q": "Detonation in SI engine is prevented by:", "o": ["Retarding spark timing", "Using higher compression ratio", "Lower octane fuel", "Reducing cooling"], "a": "Retarding spark timing" },
+                        { "q": "In Diesel engine, fuel is ignited by:", "o": ["Spark plug", "Hot air", "External flame", "Glow plug"], "a": "Hot air" },
+                        { "q": "Brake power is given by:", "o": ["(2πNT)/60", "(P×V)/t", "W/t", "F×d"], "a": "(2πNT)/60" },
+                        { "q": "Turbocharging is used to:", "o": ["Reduce fuel", "Increase efficiency", "Increase power output", "Reduce emissions"], "a": "Increase power output" },
+                        { "q": "Battery electric vehicles primarily use:", "o": ["Lead-acid batteries", "Lithium-ion batteries", "Nickel-cadmium batteries", "Zinc-carbon batteries"], "a": "Lithium-ion batteries" },
+                        { "q": "Regenerative braking in EVs is used to:", "o": ["Reduce speed only", "Recover kinetic energy into battery", "Reduce battery size", "Prevent wheel slip"], "a": "Recover kinetic energy into battery" },
+                        { "q": "Volumetric efficiency of IC engine is defined as:", "o": ["(Air intake/air required at NTP)", "(Fuel consumed/power output)", "(Indicated power/brake power)", "(Heat rejected/heat supplied)"], "a": "(Air intake/air required at NTP)" },
+                        { "q": "Thermal efficiency of an ideal Otto cycle increases with:", "o": ["Decrease in compression ratio", "Increase in compression ratio", "Constant ratio", "Increase in spark timing"], "a": "Increase in compression ratio" },
+                        { "q": "Diesel cycle differs from Otto cycle in:", "o": ["Heat addition process", "Heat rejection process", "Compression process", "Expansion process"], "a": "Heat addition process" },
+                        { "q": "Knocking tendency in SI engines is reduced by:", "o": ["High octane fuel", "High sulfur fuel", "Low pressure fuel", "Water injection only"], "a": "High octane fuel" },
+                        { "q": "BSFC stands for:", "o": ["Brake specific fuel consumption", "Brake shaft fuel coefficient", "Base specific force coefficient", "Brake safety factor coefficient"], "a": "Brake specific fuel consumption" },
+                        { "q": "The stoichiometric air-fuel ratio for petrol is:", "o": ["10:1", "12:1", "14.7:1", "18:1"], "a": "14.7:1" },
+                        { "q": "Lithium-ion batteries degrade mainly due to:", "o": ["Thermal runaway", "Deep discharge and overcharging", "Excess lubrication", "High tire load"], "a": "Deep discharge and overcharging" },
+                        { "q": "Hybrid electric vehicles use:", "o": ["Battery + Solar", "Battery + IC engine", "Only battery", "IC engine only"], "a": "Battery + IC engine" },
+                        { "q": "The function of carburetor in SI engines is:", "o": ["Ignition of fuel", "Mixing air and fuel", "Cooling the cylinder", "Lubricating piston"], "a": "Mixing air and fuel" },
+                        { "q": "Which emission is more from diesel engine than petrol engine?", "o": ["CO", "HC", "NOx", "Unburned fuel"], "a": "NOx" },
+                        { "q": "Plug-in hybrid vehicles differ from hybrids by:", "o": ["Ability to charge battery externally", "More efficient engine", "Lightweight material", "Fewer emissions"], "a": "Ability to charge battery externally" }
+                    ],
+
+                        "Refrigeration AirConditioning": [
+                            { "q": "The unit of refrigeration is:", "o": ["kW", "Ton of refrigeration", "Joule", "kcal"], "a": "Ton of refrigeration" },
+                            { "q": "COP of a refrigerator is defined as:", "o": ["(Work done/Heat absorbed)", "(Heat rejected/Work done)", "(Heat absorbed/Work done)", "(Work/Temperature)"], "a": "(Heat absorbed/Work done)" },
+                            { "q": "In vapor compression cycle, throttling is done in:", "o": ["Condenser", "Evaporator", "Expansion valve", "Compressor"], "a": "Expansion valve" },
+                            { "q": "Refrigerant R-134a is widely used because:", "o": ["It is CFC", "It has zero ozone depletion potential", "It is cheapest", "It is inert"], "a": "It has zero ozone depletion potential" },
+                            { "q": "The coefficient of performance of heat pump is:", "o": ["1 + COP of refrigerator", "1 – COP of refrigerator", "COP of refrigerator", "COP × T"], "a": "1 + COP of refrigerator" },
+                            { "q": "In comfort air-conditioning, the main objective is:", "o": ["Only cooling", "Maintaining temperature and humidity", "Dehumidification only", "Air purification only"], "a": "Maintaining temperature and humidity" },
+                            { "q": "Psychrometric chart is used to determine:", "o": ["Stress-strain", "Heat transfer coefficient", "Moisture properties of air", "Fuel-air ratio"], "a": "Moisture properties of air" },
+                            { "q": "The lowest temperature theoretically achievable is:", "o": ["0°C", "–273°C", "–100°C", "–459°C"], "a": "–273°C" },
+                            { "q": "In vapor absorption cycle, which energy source is used instead of work?", "o": ["Heat", "Pressure", "Electricity", "Kinetic energy"], "a": "Heat" },
+                            { "q": "The refrigerant should ideally have:", "o": ["High boiling point", "Low latent heat", "High latent heat and low boiling point", "High viscosity"], "a": "High latent heat and low boiling point" },
+                            { "q": "In air refrigeration cycle, the working fluid is:", "o": ["Ammonia", "Freon", "Air", "CO₂"], "a": "Air" },
+                            { "q": "Effective temperature in air conditioning is:", "o": ["Only dry bulb temperature", "Only wet bulb temperature", "Combined effect of temperature, humidity, and air velocity", "Temperature of cooling coil"], "a": "Combined effect of temperature, humidity, and air velocity" },
+                            { "q": "Human comfort range of relative humidity is:", "o": ["20–30%", "40–60%", "60–80%", "80–100%"], "a": "40–60%" },
+                            { "q": "If refrigerant has low specific volume, compressor size will be:", "o": ["Large", "Small", "Very large", "Unchanged"], "a": "Small" },
+                            { "q": "In psychrometry, specific humidity is defined as:", "o": ["kg of vapor per kg of dry air", "kg of vapor per m³ of air", "g of vapor per liter", "Relative humidity"], "a": "kg of vapor per kg of dry air" },
+                            { "q": "Which refrigeration system is used in domestic refrigerators?", "o": ["Vapor compression", "Vapor absorption", "Gas refrigeration", "Thermoelectric"], "a": "Vapor compression" },
+                            { "q": "The capacity of a refrigeration system is expressed in:", "o": ["kW", "TR", "J/s", "atm"], "a": "TR" },
+                            { "q": "In comfort AC, recommended indoor temperature in summer is:", "o": ["18–20°C", "20–22°C", "23–25°C", "28–30°C"], "a": "23–25°C" },
+                            { "q": "Fouling in condenser tubes leads to:", "o": ["Increase in heat transfer", "Decrease in COP", "Increase in COP", "No effect"], "a": "Decrease in COP" },
+                            { "q": "Which of the following is a secondary refrigerant?", "o": ["Air", "Water", "Ammonia", "Freon"], "a": "Water" }
+                        ]
+            }
+        
+        };
+        // --- End of quizData ---
+
+        const dom = {
+            loadingSpinner: document.getElementById('loading-spinner'),
+            mainContent: document.getElementById('main-content'),
+            logoutButton: document.getElementById('logout-button'),
+            profileButton: document.getElementById('profile-button'),
+            logo: document.getElementById('logo'),
+            homeContainer: document.getElementById('home-container'),
+            getStartedBtn: document.getElementById('get-started-btn'),
+            subjectSelection: document.getElementById('subject-selection'),
+            topicSelection: document.getElementById('topic-selection'),
+            quizContainer: document.getElementById('quiz-container'),
+            scoreContainer: document.getElementById('score-container'),
+            reviewContainer: document.getElementById('review-container'),
+            profileModal: document.getElementById('profile-modal'),
+            closeProfileBtn: document.getElementById('close-profile-btn'),
+            badgeContainer: document.getElementById('badge-container'),
+            noBadgesMsg: document.getElementById('no-badges-msg'),
+            subjectGrid: document.getElementById('subject-grid'),
+            topicGrid: document.getElementById('topic-grid'),
+            topicTitle: document.getElementById('topic-title'),
+            backToSubjects: document.getElementById('back-to-subjects'),
+            progressBar: document.getElementById('progress-bar'),
+            questionCounter: document.getElementById('question-counter'),
+            questionText: document.getElementById('question-text'),
+            optionsContainer: document.getElementById('options-container'),
+            nextQuestionBtn: document.getElementById('next-question-btn'),
+            quizTopicTitle: document.getElementById('quiz-topic-title'),
+            finalScore: document.getElementById('final-score'),
+            scoreFeedback: document.getElementById('score-feedback'),
+            reviewAnswersBtn: document.getElementById('review-answers-btn'),
+            retryQuizBtn: document.getElementById('retry-quiz-btn'),
+            backToTopicsBtn: document.getElementById('back-to-topics-btn'),
+            reviewQuestions: document.getElementById('review-questions'),
+            backToScoreBtn: document.getElementById('back-to-score-btn'),
+            timer: document.getElementById('timer'),
+            timeTaken: document.getElementById('time-taken'),
+            confettiCanvas: document.getElementById('confetti-canvas'),
+        };
+
+        let currentQuiz = {
+            subject: null,
+            topic: null,
+            questions: [],
+            currentQuestionIndex: 0,
+            score: 0,
+            userAnswers: [],
+        };
+
+        let timerInterval = null;
+        let startTime = 0;
+        let currentUser = null;
+
+        function switchView(viewToShow) {
+            [dom.homeContainer, dom.subjectSelection, dom.topicSelection, dom.quizContainer, dom.scoreContainer, dom.reviewContainer, dom.profileModal].forEach(view => {
+                const action = view.id === viewToShow ? 'remove' : 'add';
+                view.classList[action]('view-hidden');
+            });
+        }
+
+        function loadSubjects() {
+            dom.subjectGrid.innerHTML = '';
+            for (const subject in quizData) {
+                const card = document.createElement('div');
+                card.className = 'subject-card cursor-pointer p-6 rounded-lg text-center';
+                card.innerHTML = `<h3 class="text-xl font-bold">${subject}</h3>`;
+                card.addEventListener('click', () => showTopics(subject));
+                dom.subjectGrid.appendChild(card);
+            }
+        }
+
+        function showTopics(subject) {
+            currentQuiz.subject = subject;
+            dom.topicTitle.textContent = `Topics in ${subject}`;
+            dom.topicGrid.innerHTML = '';
+            for (const topic in quizData[subject]) {
+                const card = document.createElement('div');
+                card.className = 'topic-card cursor-pointer p-6 rounded-lg';
+                card.innerHTML = `<h3 class="text-xl font-bold">${topic.replace(/_/g, ' ')}</h3><p class="text-sm text-gray-400 mt-1">${quizData[subject][topic].length} Questions</p>`;
+                card.addEventListener('click', () => startQuiz(subject, topic));
+                dom.topicGrid.appendChild(card);
+            }
+            switchView('topic-selection');
+        }
+
+        function updateTimer() {
+            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = String(Math.floor(elapsedTime / 60)).padStart(2, '0');
+            const seconds = String(elapsedTime % 60).padStart(2, '0');
+            dom.timer.textContent = `${minutes}:${seconds}`;
+        }
+
+        function startQuiz(subject, topic) {
+            const questions = quizData[subject][topic];
+            if (!questions || questions.length === 0) {
+                alert("This topic has no questions yet. Please select another topic.");
+                return;
+            }
+
+            currentQuiz = {
+                subject,
+                topic,
+                questions: [...questions].sort(() => 0.5 - Math.random()),
+                currentQuestionIndex: 0,
+                score: 0,
+                userAnswers: [],
+            };
+            dom.quizTopicTitle.textContent = topic.replace(/_/g, ' ');
+
+            if (timerInterval) clearInterval(timerInterval);
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+
+            loadQuestion();
+            switchView('quiz-container');
+        }
+
+        function loadQuestion() {
+            const q = currentQuiz.questions[currentQuiz.currentQuestionIndex];
+            const progress = ((currentQuiz.currentQuestionIndex) / currentQuiz.questions.length) * 100;
+            dom.progressBar.style.width = `${progress}%`;
+            dom.questionCounter.textContent = `Question ${currentQuiz.currentQuestionIndex + 1} / ${currentQuiz.questions.length}`;
+            dom.questionText.textContent = q.q;
+            dom.optionsContainer.innerHTML = '';
+
+            q.o.forEach(optionText => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'quiz-option p-4 rounded-lg';
+                optionDiv.textContent = optionText;
+                optionDiv.addEventListener('click', (e) => {
+                    selectOption(e.currentTarget);
+                });
+                dom.optionsContainer.appendChild(optionDiv);
+            });
+
+            dom.nextQuestionBtn.textContent = (currentQuiz.currentQuestionIndex === currentQuiz.questions.length - 1) ? 'Finish' : 'Next →';
+        }
+
+        function selectOption(selectedDiv) {
+            document.querySelectorAll('.quiz-option').forEach(div => div.classList.remove('selected'));
+            selectedDiv.classList.add('selected');
+        }
+
+        function handleNextQuestion() {
+            const selectedOption = document.querySelector('.quiz-option.selected');
+            currentQuiz.userAnswers.push(selectedOption ? selectedOption.textContent : null);
+
+            currentQuiz.currentQuestionIndex++;
+
+            if (currentQuiz.currentQuestionIndex < currentQuiz.questions.length) {
+                loadQuestion();
+            } else {
+                showScore();
+            }
+        }
+
+        async function awardBadge(userId, badgeName) {
+            const userRef = doc(db, "users", userId);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                if (!userData.badges || !userData.badges.includes(badgeName)) {
+                    await updateDoc(userRef, {
+                        badges: arrayUnion(badgeName)
+                    });
+                }
+            } else {
+                await setDoc(userRef, { badges: [badgeName] });
+            }
+        }
+
+        function showScore() {
+            clearInterval(timerInterval);
+            const totalTimeInSeconds = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = String(Math.floor(totalTimeInSeconds / 60)).padStart(2, '0');
+            const seconds = String(totalTimeInSeconds % 60).padStart(2, '0');
+            dom.timeTaken.textContent = `Time Taken: ${minutes}:${seconds}`;
+
+            let correctAnswers = 0;
+            currentQuiz.questions.forEach((q, index) => {
+                if (q.a === currentQuiz.userAnswers[index]) {
+                    correctAnswers++;
+                }
+            });
+            currentQuiz.score = correctAnswers;
+
+            const score = currentQuiz.score;
+            const total = currentQuiz.questions.length;
+            dom.finalScore.textContent = `${score} / ${total}`;
+
+            let feedback = "Good effort! Keep practicing.";
+            if (score / total >= 0.8) feedback = "Excellent! You're a MindSpring master!";
+            if (score / total >= 0.5) feedback = "Great job! You're getting there.";
+
+            if (score === total && total > 0) {
+                feedback = "Perfect Score! You've earned a new badge!";
+                confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+                const badgeName = `${currentQuiz.subject}: ${currentQuiz.topic.replace(/_/g, ' ')}`;
+                awardBadge(currentUser.uid, badgeName);
+            }
+
+            dom.scoreFeedback.textContent = feedback;
+            switchView('score-container');
+        }
+
+        function reviewAnswers() {
+            dom.reviewQuestions.innerHTML = '';
+            currentQuiz.questions.forEach((q, index) => {
+                const userAnswer = currentQuiz.userAnswers[index];
+                const isCorrect = userAnswer === q.a;
+                const questionEl = document.createElement('div');
+                questionEl.className = 'review-question border-l-4 p-4 rounded ' + (isCorrect ? 'border-green-500 bg-green-900/20' : 'border-red-500 bg-red-900/20');
+
+                let optionsHtml = q.o.map(opt => {
+                    let classes = 'p-3 my-2 rounded-lg text-sm ';
+                    if (opt === q.a) {
+                        classes += 'bg-green-500/50';
+                    } else if (opt === userAnswer && !isCorrect) {
+                        classes += 'bg-red-500/50';
+                    } else {
+                        classes += 'bg-gray-700/30';
+                    }
+                    return `<div class="${classes}">${opt}</div>`;
+                }).join('');
+
+                questionEl.innerHTML = `
+                    <p class="font-bold mb-2">Q${index + 1}: ${q.q}</p>
+                    <div>${optionsHtml}</div>
+                `;
+                dom.reviewQuestions.appendChild(questionEl);
+            });
+            switchView('review-container');
+        }
+
+        async function openProfile() {
+            if (!currentUser) return;
+            const userRef = doc(db, "users", currentUser.uid);
+            const userSnap = await getDoc(userRef);
+
+            dom.badgeContainer.innerHTML = '';
+            if (userSnap.exists() && userSnap.data().badges && userSnap.data().badges.length > 0) {
+                dom.noBadgesMsg.classList.add('hidden');
+                userSnap.data().badges.forEach(badgeName => {
+                    const badgeEl = document.createElement('div');
+                    badgeEl.className = 'badge p-4 rounded-lg flex flex-col items-center justify-center';
+                    badgeEl.innerHTML = `
+                        <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="font-semibold text-sm">${badgeName}</p>
+                    `;
+                    dom.badgeContainer.appendChild(badgeEl);
+                });
+            } else {
+                dom.noBadgesMsg.classList.remove('hidden');
+            }
+            switchView('profile-modal');
+        }
+
+        // Re-get the button after the DOM is updated.
+        document.getElementById('get-started-btn').addEventListener('click', () => switchView('subject-selection'));
+        dom.logo.addEventListener('click', () => switchView('home-container'));
+        dom.backToSubjects.addEventListener('click', () => switchView('subject-selection'));
+        dom.retryQuizBtn.addEventListener('click', () => startQuiz(currentQuiz.subject, currentQuiz.topic));
+        dom.backToTopicsBtn.addEventListener('click', () => showTopics(currentQuiz.subject));
+        dom.reviewAnswersBtn.addEventListener('click', reviewAnswers);
+        dom.backToScoreBtn.addEventListener('click', showScore);
+        dom.profileButton.addEventListener('click', openProfile);
+        dom.closeProfileBtn.addEventListener('click', () => switchView('home-container'));
+        dom.logoutButton.addEventListener('click', () => signOut(auth).catch(error => console.error("Logout Error: ", error)));
+        dom.nextQuestionBtn.addEventListener('click', handleNextQuestion);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                loadSubjects();
+                switchView('home-container');
+                dom.loadingSpinner.style.display = 'none';
+                dom.mainContent.classList.remove('hidden');
+
+                // MODIFIED: Initialize Typed.js animation
+                new Typed('#typed-headline', {
+                    strings: ['Challenge Your Knowledge.', 'Master New Concepts.', 'Earn Your Badges.'],
+                    typeSpeed: 50,
+                    backSpeed: 25,
+                    backDelay: 1500,
+                    loop: true,
+                    smartBackspace: true
+                });
+                
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+
+</html>
