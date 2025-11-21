@@ -36,14 +36,3 @@ MindSpring is an interactive, web-based quiz application designed to help users 
 - **Typed.js** – Typewriter animations  
 - **Canvas Confetti** – Visual rewards
 
----
-
-## 📂 Project Structure
-
-MindSpring/
-├── index.html # Landing/Login page (Rename login.html or main.html to this for deployment)
-├── main.html # Main dashboard and quiz interface
-├── login.html # Authentication page
-├── aboutus.html # About the project and team
-├── bg2.jpg # Background asset
-└── README.md # Project documentation
